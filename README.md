@@ -1,7 +1,5 @@
 # T20 Hayd — Itens Superiores e Mágicos
 
-> ⚠️ **Em desenvolvimento (WIP).** Funcional, mas ainda em ajustes — comportamentos podem mudar entre versões.
-
 Automação de **melhorias, encantos e materiais especiais** de itens do **Tormenta20** (Livro Básico, Ameaças, Heróis e Deuses de Arton) no **FoundryVTT v13**. Substitui a aba de aprimoramentos nativa do sistema por uma versão sem limite de slots e com preço automático.
 
 ## O que faz

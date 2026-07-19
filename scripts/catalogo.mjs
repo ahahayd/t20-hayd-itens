@@ -424,7 +424,7 @@ export const ENCANTOS = {
 
   "energetica": { nome: "Energética", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
     beneficio: "+4 no ataque, ignora 20 de RD e converte o dano em essência; emana luz",
-    prereqs: ["formidavel"], dois: true,
+    prereqs: ["formidavel"],
     efeitos: [{ changes: [
       { key: "ataque", value: "4" },
       { key: "ignoraRD", value: "20" },
@@ -447,12 +447,12 @@ export const ENCANTOS = {
     efeitos: [{ changes: [{ key: "ataque", value: "2" }, { key: "dano", value: "2" }] }] },
 
   "lancinante": { nome: "Lancinante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
-    beneficio: "Em críticos, multiplica também os bônus numéricos (ou o +10, conforme a regra variante do sistema). Substitui Dilacerante",
-    prereqs: ["dilacerante"], dois: true, especial: "lancinante", efeitos: [] },
+    beneficio: "No acerto crítico, o +10 do Dilacerante também é multiplicado pelo multiplicador de crítico (regra revisada), ou multiplica todos os bônus numéricos (regra original) — conforme a configuração do sistema. Requer Dilacerante ativo na arma",
+    prereqs: ["dilacerante"], especial: "lancinante", efeitos: [] },
 
   "magnifica": { nome: "Magnífica", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
     beneficio: "+4 em testes de ataque e rolagens de dano (substitui Formidável — bônus não acumulam)",
-    prereqs: ["formidavel"], substitui: ["formidavel"], dois: true,
+    prereqs: ["formidavel"], substitui: ["formidavel"],
     efeitos: [{ changes: [{ key: "ataque", value: "4" }, { key: "dano", value: "4" }] }] },
 
   "piedosa": { nome: "Piedosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
@@ -632,8 +632,14 @@ export const ENCANTOS = {
 
   "caustica": { nome: "Cáustica", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
     beneficio: "Redução de ácido 10; ação de movimento + 2 PM: seus ataques causam +1d4 de ácido até o fim da cena",
-    efeitos: [{ nome: "Gotejar ácido", custo: "2", cena: true, changes: [{ key: "dano", value: "1d4[acido]" }],
-      desc: "Seus ataques causam +1d4 de ácido até o fim da cena" }] },
+    efeitos: [
+      { passivo: true, changes: [{ key: "system.tracos.resistencias.acido.bonus", value: "10" }],
+        desc: "Redução de ácido 10 (sempre ativa)" },
+      { nome: "Gotejar ácido (ativar)", custo: "2", cena: true,
+        desc: "Ação de movimento: ativa o gotejar de ácido até o fim da cena (pague ao ativar)" },
+      { nome: "Gotejar ácido (dano)", ataque: true, changes: [{ key: "dano", value: "1d4[acido]" }],
+        desc: "Enquanto ativa, seus ataques causam +1d4 de ácido (marque ao atacar)" }
+    ] },
 
   "defensor": { nome: "Defensor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
     beneficio: "+2 na Defesa",
@@ -661,7 +667,7 @@ export const ENCANTOS = {
 
   "guardiao": { nome: "Guardião", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
     beneficio: "+4 na Defesa (substitui Defensor — bônus não acumulam)",
-    prereqs: ["defensor"], substitui: ["defensor"], dois: true,
+    prereqs: ["defensor"], substitui: ["defensor"],
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "4" }] }] },
 
   "hipnotico": { nome: "Hipnótico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
@@ -1033,23 +1039,29 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
     const nomesCond = condicoes.map(c => CONDICOES[c] ?? c).join(", ");
     const descCond = nomesCond ? ` Aplica: ${nomesCond}.` : "";
 
-    /* Efeitos passivos, de perícia (skill) e de magia (spell) precisam
-     * viver NO ATOR: o motor do sistema só os enxerga lá (a transferência
-     * nativa não acontece para itens já possuídos). Efeitos de uso do
-     * próprio item (ataque/dano/condição) ficam no item. */
-    const alvoAtor = passivo || skill || !!ef.spell;
+    /* Efeitos passivos, de perícia (skill), de magia (spell) e riders de
+     * ataque (ef.ataque: aplicam-se aos ataques do usuário, ex.: uma
+     * armadura que adiciona dano de ácido às armas) precisam viver NO
+     * ATOR — o motor do sistema só os enxerga lá. Efeitos de uso do
+     * próprio item (dano/condição da própria arma) ficam no item. */
+    const rider = !!ef.ataque;
+    const alvoAtor = passivo || skill || !!ef.spell || rider;
 
     /* Efeitos situacionais (só valem sob certa condição — "somente
-     * contra construtos", "em manobras", crítico…), com custo em PM, ou
-     * de perícia (Aprimorado: só na perícia escolhida) vêm SUSPENSOS:
-     * aparecem desmarcados na janela de configuração de uso e o jogador
-     * habilita quando se aplica. Passivos nunca são suspensos (ficariam
-     * inertes no ator). */
-    const suspenso = !passivo && (skill || !!ef.opcional || (ef.custo !== undefined && ef.custo !== ""));
+     * contra construtos", "em manobras", crítico…) ou com custo em PM
+     * vêm SUSPENSOS: aparecem desmarcados na janela de configuração de
+     * uso e o jogador habilita quando se aplica. Passivos e de perícia
+     * (Aprimorado, restrito à sua perícia) ficam ativos por padrão. */
+    const suspenso = !passivo && !skill
+      && (!!ef.opcional || (ef.custo !== undefined && ef.custo !== ""));
 
     const dados = {
       name: nome,
       img: ICONES[entrada.tipo] ?? ICONES.melhoria,
+      // origin = uuid do item, como o próprio sistema faz ao criar efeitos
+      // de upgrade. Sem isso, ef.sourceName fica nulo e o motor de rolagem
+      // aplica o dmgStep (aumento de passo) na parte errada do dano.
+      origin: item.uuid,
       description: `<p>${ef.desc ?? entrada.beneficio}.${descCond}</p><p><em>${entrada.nome} (${entrada.fonte ?? "homebrew"})</em></p>`,
       changes,
       disabled: suspenso,
@@ -1059,9 +1071,10 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
           onuse: !passivo,
           durationScene: !!ef.cena,
           upgrade: `hayd-${key}`,
-          self: !passivo && !skill && !ef.spell,
+          self: !passivo && !skill && !ef.spell && !rider,
           ...(skill ? { skill: true } : {}),
           ...(ef.spell ? { spell: true } : {}),
+          ...(rider ? { attack: true } : {}),
           ...(ef.custo !== undefined && ef.custo !== "" ? { custo: String(ef.custo) } : {})
         },
         [MODULO]: { entradaId, key, alvo: alvoAtor ? "ator" : "item" }

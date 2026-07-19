@@ -49,6 +49,31 @@ Hooks.once("ready", () => {
   if (mod) mod.api = api;
   globalThis.t20HaydItens = api;
   console.log(`${MODULO} | Pronto. API em game.modules.get("${MODULO}").api`);
+
+  // Migração leve (GM): (1) marcador nativo do Lancinante; (2) preenche
+  // origin nos efeitos do módulo criados antes desta versão — sem origin,
+  // o motor de rolagem aplicava o aumento de passo na parte errada do dano.
+  if (game.user === game.users.activeGM) {
+    const corrigir = async (item) => {
+      const f = item.flags?.[MODULO];
+      if (!f) return;
+
+      if (f.encantos?.some(e => e.key === "lancinante")
+        && !Object.values(item.system?.upgrades ?? {}).includes("lancinating")) {
+        await efeitos.sincronizarLancinante(item);
+      }
+
+      const semOrigin = [...item.effects].filter(e => e.flags?.[MODULO] && !e.origin);
+      if (semOrigin.length) {
+        await item.updateEmbeddedDocuments("ActiveEffect",
+          semOrigin.map(e => ({ _id: e.id, origin: item.uuid })), { render: false });
+      }
+    };
+    (async () => {
+      for (const item of game.items) await corrigir(item).catch(() => {});
+      for (const ator of game.actors) for (const item of ator.items) await corrigir(item).catch(() => {});
+    })();
+  }
 });
 
 /* Substitui a aba de aprimoramentos na ficha de item. */

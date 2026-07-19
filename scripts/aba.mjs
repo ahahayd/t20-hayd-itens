@@ -60,7 +60,6 @@ function agruparPorCategoria(tabela, catsPermitidas, todas) {
       key,
       nome: def.nome,
       beneficio: def.beneficio ?? "",
-      dois: !!def.dois,
       homebrew: !!def.homebrew
     });
   }
@@ -86,7 +85,6 @@ function montarLista(entradas, todasEntradas = null) {
       beneficio: def.beneficio ?? "",
       fonte: def.fonte ?? "homebrew",
       nota: def.nota ?? "",
-      dois: !!def.dois,
       homebrew: !!def.homebrew,
       nEfeitos: (def.efeitos ?? []).length || (def.especial ? 1 : 0),
       suprimida: !!e.suprimidaPor,

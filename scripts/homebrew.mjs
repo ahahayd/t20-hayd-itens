@@ -131,9 +131,6 @@ async function dialogoEntrada(existente = null) {
       <input type="text" name="beneficio" value="${existente?.beneficio ?? ""}" placeholder="+1d6 de dano de trovão…"></div>
     <div class="form-group"><label>Categorias de item</label>
       <div class="hayd-cats">${catsChecks}</div></div>
-    <div class="form-group"><label class="hayd-inline">
-      <input type="checkbox" name="dois" ${existente?.dois ? "checked" : ""}>
-      Conta como dois encantos (para o preço)</label></div>
     <div class="form-group"><label>Custo do material (T$; só para materiais)</label>
       <input type="number" name="custoMaterial" min="0" value="${existente?.custoBase ?? 0}"></div>
     ${[0, 1, 2].map(linhaEfeito).join("")}
@@ -184,7 +181,6 @@ async function dialogoEntrada(existente = null) {
     cats: cats.length ? cats : ["geral"],
     fonte: "Homebrew",
     beneficio: dados.beneficio || dados.nome,
-    dois: !!dados.dois,
     efeitos
   };
   if (dados.tipo === "material") {
@@ -212,7 +208,7 @@ export async function abrirGerenciadorHomebrew(aoMudar = null) {
     <li class="hayd-hb-linha">
       <div class="hayd-info">
         <strong>${hb.nome} ★</strong>
-        <small>${hb.tipo}${hb.dois ? " · conta como 2" : ""} · ${(hb.cats ?? []).map(c => CATEGORIAS[c] ?? c).join(", ")}</small>
+        <small>${hb.tipo} · ${(hb.cats ?? []).map(c => CATEGORIAS[c] ?? c).join(", ")}</small>
         <span>${hb.beneficio}</span>
       </div>
       <a data-acao="editar" data-key="${hb.key}" data-tooltip="Editar"><i class="fa-solid fa-pen"></i></a>

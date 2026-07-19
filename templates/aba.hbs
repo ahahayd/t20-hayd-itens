@@ -73,7 +73,7 @@
         <option value="">— Adicionar encanto —</option>
         {{#each opcoesEncantos}}
         <optgroup label="{{this.grupo}}">
-          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.dois}} (conta como 2){{/if}}{{#if this.homebrew}} ★{{/if}}</option>{{/each}}
+          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.homebrew}} ★{{/if}}</option>{{/each}}
         </optgroup>
         {{/each}}
       </select>
@@ -85,7 +85,7 @@
       {{#each encantos}}
       <li>
         <div class="hayd-info {{#if this.suprimida}}hayd-suprimida{{/if}}">
-          <strong>{{this.nome}}{{#if this.pericia}} <span class="hayd-tag">{{this.pericia}}</span>{{/if}}{{#if this.dois}} <span class="hayd-tag">conta como 2</span>{{/if}}{{#if this.suprimida}} <span class="hayd-tag hayd-tag-suprimida" data-tooltip="Bônus substituído — não acumula">substituído por {{this.suprimidaNome}}</span>{{/if}}{{#if this.homebrew}} ★{{/if}}</strong>
+          <strong>{{this.nome}}{{#if this.pericia}} <span class="hayd-tag">{{this.pericia}}</span>{{/if}}{{#if this.suprimida}} <span class="hayd-tag hayd-tag-suprimida" data-tooltip="Bônus substituído — não acumula">substituído por {{this.suprimidaNome}}</span>{{/if}}{{#if this.homebrew}} ★{{/if}}</strong>
           <small>{{this.fonte}}{{#if this.nEfeitos}} · {{this.nEfeitos}} efeito(s){{else}} · manual{{/if}}</small>
           <span>{{this.beneficio}}</span>
           {{#if this.nota}}<em class="hayd-nota-entrada">{{this.nota}}</em>{{/if}}

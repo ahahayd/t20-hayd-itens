@@ -48,12 +48,9 @@ function qtdMelhorias(d) {
   return d.melhorias.length + d.materiais.length;
 }
 
-/** Quantidade de encantos para a tabela (entradas "dois" contam dobrado). */
+/** Quantidade de encantos para a tabela de preço (cada um conta como 1). */
 function qtdEncantos(d) {
-  return d.encantos.reduce((t, e) => {
-    const def = obterEntrada(e.key);
-    return t + (def?.dois ? 2 : 1);
-  }, 0);
+  return d.encantos.length;
 }
 
 export function calcularPreco(item) {
@@ -113,6 +110,7 @@ function efeitoAmeacadora(item, entradaId) {
   return [{
     name: "Ameaçadora",
     img: "icons/magic/symbols/runes-star-pentagon-blue.webp",
+    origin: item.uuid,
     description: `<p>Duplica a margem de ameaça (${criticoM}–20 → ${21 - margem * 2}–20).</p>`,
     changes: [{ key: "criticoM", value: String(-margem), mode: 2, priority: 0 }],
     disabled: false,
@@ -125,25 +123,39 @@ function efeitoAmeacadora(item, entradaId) {
 }
 
 /**
- * Lancinante: usa a automação nativa do sistema. O sistema ativa a
- * multiplicação de bônus em críticos quando algum slot de
- * system.upgrades contém "lancinating" (respeitando a regra variante
- * configurada em tormenta20.lancinatingVersion).
+ * Lancinante: usa a automação nativa do sistema. Em rollDamage o sistema
+ * faz `lancinante = Object.values(item.system.upgrades).includes("lancinating")`
+ * e, no crítico, multiplica o dano conforme a regra variante configurada
+ * em tormenta20.lancinatingVersion:
+ *   - "revised": multiplica só os termos com flavor "danoCritico"
+ *     (o +10 do Dilacerante → +30 em x3, +40 em x4…);
+ *   - "default": multiplica todos os bônus numéricos da rolagem.
+ *
+ * Como o módulo remove a aba nativa, usamos system.upgrades apenas como
+ * marcador. O slot "material" é dedicado a esse marcador para não colidir
+ * com nada visível ao usuário. Idempotente e re-aplicável.
  */
-async function sincronizarLancinante(item) {
+export async function sincronizarLancinante(item) {
   if (!item.system?.upgrades) return;
   const d = dadosDoItem(item);
-  const tem = d.encantos.some(e => e.key === "lancinante");
+  const temLanc = d.encantos.some(e => e.key === "lancinante");
+  const temDilac = d.encantos.some(e => e.key === "dilacerante");
   const slots = item.system.upgrades;
-  const slotComLanc = Object.entries(slots).find(([, v]) => v === "lancinating")?.[0];
+  const jaMarcado = Object.values(slots).includes("lancinating");
 
-  if (tem && !slotComLanc) {
+  if (temLanc && !jaMarcado) {
+    // Prefere um slot vazio; senão, usa "material" como marcador dedicado.
     const livre = Object.entries(slots).find(([k, v]) => !v && k.startsWith("encanto"))?.[0]
-      ?? Object.entries(slots).find(([, v]) => !v)?.[0];
-    if (livre) await item.update({ [`system.upgrades.${livre}`]: "lancinating" }, { render: false });
-    else ui.notifications.warn("Lancinante: nenhum slot interno livre para ativar a automação nativa.");
-  } else if (!tem && slotComLanc) {
-    await item.update({ [`system.upgrades.${slotComLanc}`]: "" }, { render: false });
+      ?? Object.entries(slots).find(([k, v]) => !v && k !== "material")?.[0]
+      ?? "material";
+    await item.update({ [`system.upgrades.${livre}`]: "lancinating" }, { render: false });
+  } else if (!temLanc && jaMarcado) {
+    const slot = Object.entries(slots).find(([, v]) => v === "lancinating")[0];
+    await item.update({ [`system.upgrades.${slot}`]: "" }, { render: false });
+  }
+
+  if (temLanc && !temDilac) {
+    ui.notifications.warn("Lancinante requer o encanto Dilacerante na arma — sem ele, não há +10 de crítico para multiplicar.");
   }
 }
 
@@ -208,7 +220,11 @@ async function criarEfeitosDaEntrada(item, key, def, id, opcoes = {}) {
       e.origin = item.uuid;
       e.flags[MODULO].itemId = item.id;
     }
-    await item.actor.createEmbeddedDocuments("ActiveEffect", doAtor, { render: false });
+    // Sem render: false — criar o efeito no ator dispara a re-preparação
+    // dos dados derivados (Defesa, RD…) e re-renderiza a ficha do ator na
+    // hora, sem precisar desequipar/reequipar.
+    await item.actor.createEmbeddedDocuments("ActiveEffect", doAtor);
+    refrescarAtor(item.actor);
   }
 }
 
@@ -222,9 +238,18 @@ async function excluirEfeitosDaEntrada(item, id) {
       e.flags?.[MODULO]?.entradaId === id && e.flags?.[MODULO]?.itemId === item.id
     );
     if (noAtor.length) {
-      await item.actor.deleteEmbeddedDocuments("ActiveEffect", noAtor.map(e => e.id), { render: false });
+      await item.actor.deleteEmbeddedDocuments("ActiveEffect", noAtor.map(e => e.id));
+      refrescarAtor(item.actor);
     }
   }
+}
+
+/** Força o ator a recalcular os dados derivados e re-renderizar a ficha. */
+function refrescarAtor(ator) {
+  try {
+    ator.reset();
+    ator.render(false);
+  } catch (_e) { /* ficha fechada */ }
 }
 
 /* ------------------------------------------------------------------ */
@@ -259,7 +284,14 @@ export async function sincronizarEfeitosAtor(item) {
       novos.push(ef);
     }
   }
-  if (novos.length) await ator.createEmbeddedDocuments("ActiveEffect", novos, { render: false });
+  if (novos.length) {
+    await ator.createEmbeddedDocuments("ActiveEffect", novos);
+    refrescarAtor(ator);
+  }
+
+  // Reafirma o marcador nativo do Lancinante (itens copiados/arrastados
+  // podem chegar com as flags do módulo mas sem o marcador em upgrades).
+  await sincronizarLancinante(item);
 }
 
 /** Remove do ator os efeitos originados de um item (item excluído/removido). */
