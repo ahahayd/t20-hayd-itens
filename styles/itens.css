@@ -1,0 +1,138 @@
+/* ════════════════════════════════════════════════════════════════
+   t20-hayd-itens — aba "Melhorias & Encantos" e diálogos
+   Visual neutro: herda as cores da ficha de item do sistema.
+   ════════════════════════════════════════════════════════════════ */
+
+.hayd-itens-aba {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 4px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+/* ── Preço ── */
+.hayd-preco {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 3px;
+}
+.hayd-preco-item { display: flex; flex-direction: column; }
+.hayd-preco-item label { font-size: 0.7em; text-transform: uppercase; opacity: 0.7; }
+.hayd-preco-item strong { font-size: 0.95em; }
+.hayd-preco-base { width: 80px; height: 22px; }
+.hayd-preco-total { margin-left: auto; }
+.hayd-preco-total strong { font-size: 1.15em; }
+
+/* ── Filtro / barra ── */
+.hayd-filtro {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.hayd-inline { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85em; }
+.hayd-inline input[type="checkbox"] { margin: 0; }
+.hayd-btn {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  line-height: 1.4;
+}
+.hayd-abrir-homebrew { margin-left: auto; }
+
+/* ── Seções ── */
+.hayd-secao { border-top: 1px solid rgba(128, 128, 128, 0.3); padding-top: 6px; }
+.hayd-secao h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95em;
+  border: none;
+  margin: 0 0 4px;
+}
+.hayd-materiais {
+  border: 1px solid rgba(180, 140, 40, 0.5);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: rgba(180, 140, 40, 0.06);
+}
+.hayd-materiais h3 i { color: #b48c28; }
+
+.hayd-adicionar { display: flex; gap: 6px; margin-bottom: 6px; }
+.hayd-adicionar select { flex: 1; }
+.hayd-adicionar .hayd-btn { width: 32px; padding: 2px 0; }
+
+/* ── Listas ── */
+.hayd-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hayd-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 3px;
+}
+.hayd-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.hayd-info small { opacity: 0.65; font-size: 0.75em; }
+.hayd-info span { font-size: 0.85em; }
+.hayd-nota-entrada { font-size: 0.78em; opacity: 0.8; }
+.hayd-tag {
+  font-size: 0.7em;
+  padding: 0 5px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 3px;
+  vertical-align: middle;
+}
+.hayd-tag-suprimida { border-color: rgba(168, 50, 42, 0.6); color: #a8322a; }
+.hayd-suprimida > span, .hayd-suprimida > small { opacity: 0.55; }
+.hayd-remover, .hayd-descarregar {
+  flex: 0 0 auto;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.hayd-remover:hover { opacity: 1; color: #a8322a; }
+.hayd-descarregar:hover { opacity: 1; }
+.hayd-material-custo { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.hayd-material-custo label { font-size: 0.75em; opacity: 0.7; }
+.hayd-custo-material { width: 76px; height: 22px; }
+.hayd-material-linha img { border: none; }
+
+.hayd-vazio { font-size: 0.85em; opacity: 0.65; font-style: italic; margin: 2px 0; }
+.hayd-nota { font-size: 0.78em; opacity: 0.75; margin: 2px 0; }
+
+/* ── Injeção alquímica ── */
+.hayd-alquimica {
+  border: 1px solid rgba(90, 140, 90, 0.5);
+  border-radius: 4px;
+  padding: 6px 8px;
+  background: rgba(90, 140, 90, 0.06);
+}
+.hayd-alquimica h3 i { color: #4e8a4e; }
+.hayd-alquimica img { flex: 0 0 auto; border-radius: 3px; }
+
+.hayd-injecao-rodape { gap: 3px; }
+.hayd-injetar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1.6;
+}
+
+/* ── Diálogos (homebrew) ── */
+.hayd-scroll { max-height: min(70vh, 640px); overflow-y: auto; padding-right: 6px; }
+.hayd-fieldset { border: 1px solid rgba(128, 128, 128, 0.35); padding: 6px 8px; margin-bottom: 6px; }
+.hayd-fieldset legend { font-size: 0.85em; padding: 0 4px; }
+.hayd-linha-efeito { display: flex; gap: 4px; margin-bottom: 4px; }
+.hayd-linha-efeito input[type="text"]:first-child { flex: 1; }
+.hayd-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+
+.hayd-hb-gerenciador { max-height: 380px; overflow-y: auto; }
+.hayd-hb-linha a { flex: 0 0 auto; cursor: pointer; opacity: 0.7; padding: 0 3px; }
+.hayd-hb-linha a:hover { opacity: 1; }

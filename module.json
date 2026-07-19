@@ -1,0 +1,59 @@
+{
+  "id": "t20-hayd-itens",
+  "title": "T20 Hayd — Itens Superiores e Mágicos",
+  "description": "Automação completa de melhorias, encantos e materiais especiais do Tormenta20 (Livro Básico, Ameaças, Heróis e Deuses de Arton). Substitui a aba de aprimoramentos do sistema por uma aba sem limite de slots, com ajuste automático de preço, suporte a homebrews, materiais especiais destacados e automação da Injeção Alquímica.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "tormenta20",
+        "type": "system",
+        "compatibility": {
+          "minimum": "1.5.0"
+        }
+      }
+    ]
+  },
+  "authors": [
+    {
+      "name": "Hayd"
+    }
+  ],
+  "esmodules": [
+    "scripts/main.mjs"
+  ],
+  "styles": [
+    "styles/itens.css"
+  ],
+  "languages": [
+    {
+      "lang": "pt-BR",
+      "name": "Português (Brasil)",
+      "path": "lang/pt-BR.json"
+    }
+  ],
+  "flags": {
+    "hotReload": {
+      "extensions": [
+        "css",
+        "hbs",
+        "json"
+      ],
+      "paths": [
+        "styles",
+        "templates",
+        "lang"
+      ]
+    }
+  },
+  "url": "https://github.com/Haydgi/t20-hayd-itens",
+  "manifest": "https://raw.githubusercontent.com/Haydgi/t20-hayd-itens/main/module.json",
+  "download": "https://github.com/Haydgi/t20-hayd-itens/archive/refs/heads/main.zip",
+  "readme": "https://github.com/Haydgi/t20-hayd-itens/blob/main/README.md",
+  "bugs": "https://github.com/Haydgi/t20-hayd-itens/issues",
+  "license": "MIT"
+}
