@@ -1,0 +1,96 @@
+{{!-- t20-hayd-itens | editor-entrada.hbs — editor de efeitos de uma entrada --}}
+<form class="hayd-editor-entrada">
+  <datalist id="hayd-editor-caminhos">
+    {{#each caminhos}}<option value="{{this.key}}">{{this.rotulo}}</option>{{/each}}
+  </datalist>
+
+  <div class="hayd-editor-cab">
+    <p class="notes">{{fonte}} — edite o que este item concede e como. Cada "efeito" vira um Efeito Ativo no item ou no ator.</p>
+    <div class="form-group">
+      <label>Benefício (texto exibido)</label>
+      <input type="text" name="beneficio" value="{{beneficio}}">
+    </div>
+    {{#if temEspecial}}
+    <div class="form-group hayd-especial">
+      <label class="hayd-inline">
+        <input type="checkbox" name="especialDesabilitado" {{#if especialDesabilitado}}checked{{/if}}>
+        Desabilitar automação especial ({{especialNome}})
+      </label>
+      <p class="notes">Com isto marcado, a automação exclusiva desta melhoria não faz nada — só os efeitos abaixo se aplicam.</p>
+    </div>
+    {{/if}}
+  </div>
+
+  <div class="hayd-editor-efeitos">
+    {{#each efeitos}}
+    <fieldset class="hayd-editor-efeito" data-idx="{{@index}}">
+      <legend>
+        Efeito {{sum @index 1}}
+        <button type="button" class="hayd-icone hayd-rem-efeito" data-idx="{{@index}}" data-tooltip="Remover efeito"><i class="fa-solid fa-trash"></i></button>
+      </legend>
+
+      <div class="hayd-editor-grid">
+        <div class="form-group">
+          <label>Como concede</label>
+          <select name="ef.{{@index}}.tipo">
+            {{#each ../tipos}}<option value="{{this.v}}" {{#if (eq this.v ../tipo)}}selected{{/if}}>{{this.l}}</option>{{/each}}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Custo (PM)</label>
+          <input type="text" name="ef.{{@index}}.custo" value="{{this.custo}}" placeholder="ex.: 2 ou -1" style="width:70px">
+        </div>
+        <div class="form-group hayd-checks">
+          <label class="hayd-inline"><input type="checkbox" name="ef.{{@index}}.opcional" {{#if this.opcional}}checked{{/if}}> Situacional (nasce desmarcado)</label>
+          <label class="hayd-inline"><input type="checkbox" name="ef.{{@index}}.cena" {{#if this.cena}}checked{{/if}}> Dura a cena</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Nome do efeito (opcional)</label>
+        <input type="text" name="ef.{{@index}}.nome" value="{{this.nome}}" placeholder="ex.: Raio secundário">
+      </div>
+      <div class="form-group">
+        <label>Descrição (opcional)</label>
+        <input type="text" name="ef.{{@index}}.desc" value="{{this.desc}}">
+      </div>
+
+      <div class="form-group">
+        <label>Condições aplicadas ao alvo</label>
+        <div class="hayd-cond-lista">
+          {{#each this.condicoes}}
+          <label class="hayd-inline"><input type="checkbox" name="ef.{{@../index}}.cond.{{this.id}}" {{#if this.marcada}}checked{{/if}}> {{this.nome}}</label>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="hayd-changes">
+        <div class="hayd-changes-cab"><span>Chave</span><span>Modo</span><span>Valor</span><span></span></div>
+        {{#each this.changes}}
+        <div class="hayd-change" data-cidx="{{@index}}">
+          <input type="text" name="ef.{{@../index}}.ch.{{@index}}.key" list="hayd-editor-caminhos" value="{{this.key}}" placeholder="ataque, dano, system.pericias.luta.bonus…">
+          <select name="ef.{{@../index}}.ch.{{@index}}.mode">
+            {{#each ../../modos}}<option value="{{this.v}}" {{#if (eq this.v ../mode)}}selected{{/if}}>{{this.l}}</option>{{/each}}
+          </select>
+          <input type="text" name="ef.{{@../index}}.ch.{{@index}}.value" value="{{this.value}}" placeholder="1 ou 2d6[frio]">
+          <button type="button" class="hayd-icone hayd-rem-change" data-idx="{{@../index}}" data-cidx="{{@index}}" data-tooltip="Remover"><i class="fa-solid fa-minus"></i></button>
+        </div>
+        {{/each}}
+        <button type="button" class="hayd-btn hayd-add-change" data-idx="{{@index}}"><i class="fa-solid fa-plus"></i> Adicionar mudança</button>
+      </div>
+    </fieldset>
+    {{else}}
+    <p class="hayd-vazio">Sem efeitos. Este item não concede nada automatizado (só texto).</p>
+    {{/each}}
+
+    <button type="button" class="hayd-btn hayd-add-efeito"><i class="fa-solid fa-plus"></i> Adicionar efeito</button>
+  </div>
+
+  <footer class="hayd-editor-rodape">
+    <p class="notes">Chaves de rolagem: <code>ataque</code>, <code>dano</code> (use <code>2d6[frio]</code> para tipar), <code>passos</code>, <code>criticoM</code> (−1 = +1 de margem), <code>criticoX</code>, <code>danoCritico</code>, <code>ignoraRD</code>, <code>tipoDano</code>. Para o ator, use caminhos <code>system.…</code>.</p>
+    <div class="hayd-editor-botoes">
+      <button type="button" class="hayd-btn hayd-primario hayd-salvar"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+      <button type="button" class="hayd-btn hayd-restaurar-editor" data-tooltip="Voltar ao padrão do módulo"><i class="fa-solid fa-rotate-left"></i> Restaurar padrão</button>
+    </div>
+  </footer>
+</form>

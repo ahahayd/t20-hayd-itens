@@ -1,0 +1,31 @@
+{{!-- t20-hayd-itens | editor-lista.hbs — gerenciador de efeitos --}}
+<div class="hayd-editor-lista">
+  <div class="hayd-editor-barra">
+    <input type="text" class="hayd-editor-busca" placeholder="Buscar…" value="{{busca}}">
+    <select class="hayd-editor-grupo">
+      <option value="">Todos os tipos</option>
+      {{#each grupos}}<option value="{{this}}" {{#if (eq this ../grupoSel)}}selected{{/if}}>{{this}}</option>{{/each}}
+    </select>
+    <span class="hayd-editor-contagem">{{entradas.length}}</span>
+  </div>
+
+  <div class="hayd-editor-tabela">
+    {{#each entradas}}
+    <div class="hayd-editor-linha {{#if this.modificado}}modificado{{/if}}">
+      <div class="hayd-editor-info">
+        <strong>{{this.nome}}{{#if this.modificado}} <span class="hayd-tag hayd-tag-mod" data-tooltip="Modificado pelo GM">modificado</span>{{/if}}{{#if this.especial}} <span class="hayd-tag" data-tooltip="Possui automação especial">especial</span>{{/if}}</strong>
+        <small>{{this.grupo}} · {{this.fonte}}</small>
+        <span>{{this.beneficio}}</span>
+      </div>
+      <div class="hayd-editor-acoes">
+        <button type="button" class="hayd-btn hayd-editar" data-key="{{this.key}}"><i class="fa-solid fa-pen"></i> Editar</button>
+        {{#if this.modificado}}
+        <button type="button" class="hayd-btn hayd-restaurar" data-key="{{this.key}}" data-tooltip="Restaurar ao padrão do módulo"><i class="fa-solid fa-rotate-left"></i></button>
+        {{/if}}
+      </div>
+    </div>
+    {{else}}
+    <p class="hayd-vazio">Nenhuma entrada encontrada.</p>
+    {{/each}}
+  </div>
+</div>

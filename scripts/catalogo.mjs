@@ -122,7 +122,7 @@ export function precoEncantos(n) {
 /* Condições (nomes idênticos à lista do livro base)                  */
 /* ================================================================== */
 
-const CONDICOES = {
+export const CONDICOES = {
   abalado: "Abalado", atordoado: "Atordoado", cego: "Cego",
   debilitado: "Debilitado", desprevenido: "Desprevenido",
   "em-chamas": "Em Chamas", enjoado: "Enjoado", enredado: "Enredado",
@@ -1105,24 +1105,66 @@ let _homebrews = () => [];
 /** Registrado por homebrew.mjs para evitar dependência circular. */
 export function registrarFonteHomebrew(fn) { _homebrews = fn; }
 
+let _overrides = () => ({});
+/** Registrado por editor.mjs: { [key]: { efeitos?, especialDesabilitado? } } */
+export function registrarFonteOverrides(fn) { _overrides = fn; }
+
+/** Aplica o override do GM (se houver) sobre a definição base de uma entrada. */
+export function aplicarOverride(key, def) {
+  if (!def) return def;
+  const ov = _overrides()[key];
+  if (!ov) return def;
+  const out = { ...def };
+  if (Array.isArray(ov.efeitos)) out.efeitos = ov.efeitos;
+  if (ov.beneficio) out.beneficio = ov.beneficio;
+  if (ov.especialDesabilitado && out.especial) out.especial = null;
+  out._overridden = true;
+  return out;
+}
+
+function comOverrides(tabela) {
+  const out = {};
+  for (const [k, def] of Object.entries(tabela)) out[k] = aplicarOverride(k, def);
+  return out;
+}
+
 export function obterMelhorias() {
   const extra = {};
   for (const hb of _homebrews()) if (hb.tipo === "melhoria") extra[hb.key] = hb;
-  return { ...MELHORIAS, ...extra };
+  return comOverrides({ ...MELHORIAS, ...extra });
 }
 
 export function obterEncantos() {
   const extra = {};
   for (const hb of _homebrews()) if (hb.tipo === "encanto") extra[hb.key] = hb;
-  return { ...ENCANTOS, ...extra };
+  return comOverrides({ ...ENCANTOS, ...extra });
 }
 
 export function obterMateriais() {
   const extra = {};
   for (const hb of _homebrews()) if (hb.tipo === "material") extra[hb.key] = hb;
-  return { ...MATERIAIS, ...extra };
+  return comOverrides({ ...MATERIAIS, ...extra });
 }
 
 export function obterEntrada(key) {
   return obterMelhorias()[key] ?? obterEncantos()[key] ?? obterMateriais()[key] ?? null;
+}
+
+/** Definição base (sem override), para o botão "Restaurar padrão" do editor. */
+export function obterEntradaBase(key) {
+  const hb = _homebrews().find(h => h.key === key);
+  return MELHORIAS[key] ?? ENCANTOS[key] ?? MATERIAIS[key] ?? hb ?? null;
+}
+
+/** Todas as entradas base (catálogo + homebrews), para listar no editor. */
+export function obterTodasEntradas() {
+  const todas = [];
+  for (const [key, def] of Object.entries(MELHORIAS)) todas.push({ key, ...def, grupo: "Melhoria" });
+  for (const [key, def] of Object.entries(ENCANTOS)) todas.push({ key, ...def, grupo: "Encanto" });
+  for (const [key, def] of Object.entries(MATERIAIS)) todas.push({ key, ...def, tipo: "material", grupo: "Material" });
+  for (const hb of _homebrews()) {
+    const grupo = hb.tipo === "melhoria" ? "Melhoria (★)" : hb.tipo === "encanto" ? "Encanto (★)" : "Material (★)";
+    todas.push({ ...hb, grupo });
+  }
+  return todas;
 }

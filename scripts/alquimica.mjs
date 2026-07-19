@@ -8,13 +8,19 @@
  *    (permitindo escolher poderes/aprimoramentos) e a dose é consumida.
  */
 
-import { MODULO } from "./catalogo.mjs";
+import { MODULO, obterEntrada } from "./catalogo.mjs";
 import { dadosDoItem } from "./efeitos.mjs";
 
 const MAX_DOSES = 2;
 const { DialogV2 } = foundry.applications.api;
 
+/** true se a automação da Injeção Alquímica não foi desabilitada pelo GM. */
+export function automacaoAlquimicaAtiva() {
+  return obterEntrada("injecao-alquimica")?.especial === "alquimica";
+}
+
 function temInjecao(item) {
+  if (!automacaoAlquimicaAtiva()) return false;
   return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === "injecao-alquimica");
 }
 

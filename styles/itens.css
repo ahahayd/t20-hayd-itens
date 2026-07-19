@@ -136,3 +136,51 @@
 .hayd-hb-gerenciador { max-height: 380px; overflow-y: auto; }
 .hayd-hb-linha a { flex: 0 0 auto; cursor: pointer; opacity: 0.7; padding: 0 3px; }
 .hayd-hb-linha a:hover { opacity: 1; }
+
+/* ── Editor de Efeitos (configurações, GM) ──────────────────────── */
+.t20-hayd-itens-editor .window-content { padding: 0; }
+
+.hayd-editor-lista { display: flex; flex-direction: column; height: 100%; }
+.hayd-editor-barra {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid rgba(128, 128, 128, 0.35);
+}
+.hayd-editor-busca { flex: 1; }
+.hayd-editor-grupo { width: auto; flex: 0 0 auto; }
+.hayd-editor-contagem { font-size: 0.85em; opacity: 0.7; }
+.hayd-editor-tabela { flex: 1; overflow-y: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.hayd-editor-linha {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 6px; border: 1px solid rgba(128, 128, 128, 0.25); border-radius: 3px;
+}
+.hayd-editor-linha.modificado { border-left: 3px solid #b48c28; }
+.hayd-editor-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.hayd-editor-info small { opacity: 0.65; font-size: 0.75em; }
+.hayd-editor-info span { font-size: 0.85em; }
+.hayd-editor-acoes { display: flex; gap: 4px; flex: 0 0 auto; }
+.hayd-editor-acoes .hayd-btn { width: auto; padding: 2px 8px; line-height: 1.4; }
+.hayd-tag-mod { border-color: rgba(180, 140, 40, 0.6); color: #b48c28; }
+
+/* Editor de entrada */
+.hayd-editor-entrada { display: flex; flex-direction: column; gap: 8px; padding: 8px 10px; overflow-y: auto; height: 100%; }
+.hayd-editor-cab { border-bottom: 1px solid rgba(128, 128, 128, 0.3); padding-bottom: 6px; }
+.hayd-especial { border: 1px solid rgba(180, 140, 40, 0.5); border-radius: 3px; padding: 6px 8px; background: rgba(180, 140, 40, 0.06); }
+.hayd-editor-efeitos { display: flex; flex-direction: column; gap: 8px; }
+.hayd-editor-efeito { border: 1px solid rgba(128, 128, 128, 0.35); border-radius: 4px; padding: 6px 8px; }
+.hayd-editor-efeito legend { font-size: 0.85em; font-weight: 600; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+.hayd-editor-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; }
+.hayd-editor-grid .hayd-checks { display: flex; flex-direction: column; gap: 2px; }
+.hayd-editor-entrada .form-group { margin: 4px 0; }
+.hayd-editor-entrada .form-group > label { font-size: 0.8em; font-weight: 600; opacity: 0.85; }
+.hayd-cond-lista { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.hayd-changes { margin-top: 6px; border-top: 1px dashed rgba(128, 128, 128, 0.3); padding-top: 6px; }
+.hayd-changes-cab { display: grid; grid-template-columns: 1fr 150px 1fr 28px; gap: 4px; font-size: 0.72em; text-transform: uppercase; opacity: 0.6; margin-bottom: 2px; }
+.hayd-change { display: grid; grid-template-columns: 1fr 150px 1fr 28px; gap: 4px; margin-bottom: 3px; align-items: center; }
+.hayd-icone { background: transparent; border: none; width: auto; padding: 2px 4px; cursor: pointer; opacity: 0.7; }
+.hayd-icone:hover { opacity: 1; box-shadow: none; }
+.hayd-add-change { width: auto; margin-top: 2px; padding: 1px 8px; font-size: 0.85em; }
+.hayd-add-efeito { width: auto; padding: 3px 10px; }
+.hayd-editor-rodape { border-top: 1px solid rgba(128, 128, 128, 0.3); padding-top: 6px; margin-top: 4px; }
+.hayd-editor-botoes { display: flex; gap: 6px; }
+.hayd-editor-botoes .hayd-btn { width: auto; padding: 3px 12px; }
+.hayd-primario { font-weight: 600; }

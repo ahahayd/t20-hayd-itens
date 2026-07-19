@@ -9,6 +9,7 @@ import * as catalogo from "./catalogo.mjs";
 import * as efeitos from "./efeitos.mjs";
 import { aoRenderizarFichaItem } from "./aba.mjs";
 import { registrarHomebrew, abrirGerenciadorHomebrew, obterHomebrews } from "./homebrew.mjs";
+import { registrarEditor, abrirEditor, obterOverrides } from "./editor.mjs";
 import {
   opcoesMenuContexto, aoRenderizarMensagem,
   carregarAlquimico, descarregarAlquimico
@@ -18,6 +19,7 @@ Hooks.once("init", () => {
   console.log(`${MODULO} | Inicializando — Itens Superiores e Mágicos`);
 
   registrarHomebrew();
+  registrarEditor();
 
   game.settings.registerMenu(MODULO, "homebrewMenu", {
     name: "Homebrews de Melhorias e Encantos",
@@ -32,7 +34,9 @@ Hooks.once("init", () => {
   });
 
   foundry.applications.handlebars.loadTemplates([
-    `modules/${MODULO}/templates/aba.hbs`
+    `modules/${MODULO}/templates/aba.hbs`,
+    `modules/${MODULO}/templates/editor-lista.hbs`,
+    `modules/${MODULO}/templates/editor-entrada.hbs`
   ]);
 });
 
@@ -41,7 +45,9 @@ Hooks.once("ready", () => {
     catalogo,
     efeitos,
     homebrews: obterHomebrews,
+    overrides: obterOverrides,
     abrirGerenciadorHomebrew,
+    abrirEditor,
     carregarAlquimico,
     descarregarAlquimico
   };
