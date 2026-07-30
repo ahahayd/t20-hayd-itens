@@ -31,7 +31,7 @@ export function dadosDoItem(item) {
   };
 }
 
-/** É munição? (preços pela metade — LB p.178) */
+/** É munição? (preços pela metade — T20 p.178) */
 export function ehMunicao(item) {
   return item.type === "consumivel" && item.system?.tipo === "ammo";
 }
@@ -42,7 +42,7 @@ export function ehMunicao(item) {
 
 /**
  * Quantidade de melhorias para a tabela de preço:
- * cada material especial também conta como uma melhoria (LB p.165).
+ * cada material especial também conta como uma melhoria (T20 p.165).
  */
 function qtdMelhorias(d) {
   return d.melhorias.length + d.materiais.length;
@@ -53,47 +53,58 @@ function qtdEncantos(d) {
   return d.encantos.length;
 }
 
-export function calcularPreco(item) {
-  const d = dadosDoItem(item);
+/**
+ * Preço a partir de um instantâneo de dados, sem reler o item. Permite
+ * calcular o preço do estado FUTURO e gravá-lo no mesmo update que as
+ * flags, em vez de precisar de uma segunda ida ao banco.
+ */
+export function calcularPrecoDados(item, d) {
   const base = Number(d.precoBase ?? item.system?.preco ?? 0) || 0;
   const mult = ehMunicao(item) ? 0.5 : 1;
-  const materiais = d.materiais.reduce((t, m) => t + (Number(m.custo) || 0), 0);
-  const total = base
-    + precoMelhorias(qtdMelhorias(d)) * mult
-    + precoEncantos(qtdEncantos(d)) * mult
-    + materiais * mult;
+  const nMelhorias = qtdMelhorias(d);
+  const nEncantos = qtdEncantos(d);
+  const materiais = d.materiais.reduce((t, m) => t + (Number(m.custo) || 0), 0) * mult;
+  const melhorias = precoMelhorias(nMelhorias) * mult;
+  const encantos = precoEncantos(nEncantos) * mult;
   return {
     base,
-    melhorias: precoMelhorias(qtdMelhorias(d)) * mult,
-    encantos: precoEncantos(qtdEncantos(d)) * mult,
-    materiais: materiais * mult,
-    total: Math.round(total * 100) / 100,
-    nMelhorias: qtdMelhorias(d),
-    nEncantos: qtdEncantos(d)
+    melhorias,
+    encantos,
+    materiais,
+    total: Math.round((base + melhorias + encantos + materiais) * 100) / 100,
+    nMelhorias,
+    nEncantos
   };
 }
 
-async function atualizarPreco(item) {
-  const d = dadosDoItem(item);
-  if (d.precoBase === null) return; // ainda não gerenciado
-  const { total } = calcularPreco(item);
-  if (item.system?.preco !== total) {
-    await item.update({ "system.preco": total }, { render: false });
-  }
+export function calcularPreco(item) {
+  return calcularPrecoDados(item, dadosDoItem(item));
+}
+
+/**
+ * Fragmento de update com o preço recalculado — ou null, se o item ainda
+ * não é gerenciado ou o preço não mudou.
+ */
+function precoAtualizado(item, d) {
+  if (d.precoBase === null || d.precoBase === undefined) return null; // ainda não gerenciado
+  const { total } = calcularPrecoDados(item, d);
+  if (item.system?.preco === total) return null;
+  return { "system.preco": total };
+}
+
+/** Preço base a capturar na primeira adição (o preço atual do item). */
+function precoBaseInicial(item) {
+  return Number(item.system?.preco ?? 0) || 0;
 }
 
 /** Define o preço base manualmente (campo da aba). */
 export async function definirPrecoBase(item, valor) {
-  await item.update({ [`flags.${MODULO}.precoBase`]: Math.max(0, Number(valor) || 0) }, { render: false });
-  await atualizarPreco(item);
-}
-
-/** Garante que o preço base foi capturado antes da primeira adição. */
-async function garantirPrecoBase(item) {
-  const d = dadosDoItem(item);
-  if (d.precoBase === null) {
-    await item.update({ [`flags.${MODULO}.precoBase`]: Number(item.system?.preco ?? 0) || 0 }, { render: false });
-  }
+  const precoBase = Math.max(0, Number(valor) || 0);
+  const d = { ...dadosDoItem(item), precoBase };
+  await item.update({
+    [`flags.${MODULO}.precoBase`]: precoBase,
+    ...(precoAtualizado(item, d) ?? {})
+  }, { render: false });
 }
 
 /* ------------------------------------------------------------------ */
@@ -135,28 +146,43 @@ function efeitoAmeacadora(item, entradaId) {
  * marcador. O slot "material" é dedicado a esse marcador para não colidir
  * com nada visível ao usuário. Idempotente e re-aplicável.
  */
-export async function sincronizarLancinante(item) {
-  if (!item.system?.upgrades) return;
-  const d = dadosDoItem(item);
+/**
+ * Fragmento de update que acerta o marcador nativo — ou null, se já está
+ * correto. Separado da escrita para poder viajar junto do update das flags.
+ */
+function marcadorLancinante(item, d) {
+  const slots = item.system?.upgrades;
+  if (!slots) return null;
   const temLanc = d.encantos.some(e => e.key === "lancinante");
-  const temDilac = d.encantos.some(e => e.key === "dilacerante");
-  const slots = item.system.upgrades;
   const jaMarcado = Object.values(slots).includes("lancinating");
+  if (temLanc === jaMarcado) return null;
 
-  if (temLanc && !jaMarcado) {
+  if (temLanc) {
     // Prefere um slot vazio; senão, usa "material" como marcador dedicado.
     const livre = Object.entries(slots).find(([k, v]) => !v && k.startsWith("encanto"))?.[0]
       ?? Object.entries(slots).find(([k, v]) => !v && k !== "material")?.[0]
       ?? "material";
-    await item.update({ [`system.upgrades.${livre}`]: "lancinating" }, { render: false });
-  } else if (!temLanc && jaMarcado) {
-    const slot = Object.entries(slots).find(([, v]) => v === "lancinating")[0];
-    await item.update({ [`system.upgrades.${slot}`]: "" }, { render: false });
+    return { [`system.upgrades.${livre}`]: "lancinating" };
   }
+  const slot = Object.entries(slots).find(([, v]) => v === "lancinating")[0];
+  return { [`system.upgrades.${slot}`]: "" };
+}
 
+/** Avisa se o Lancinante está sem o Dilacerante que ele multiplica. */
+function avisarLancinante(d) {
+  const temLanc = d.encantos.some(e => e.key === "lancinante");
+  const temDilac = d.encantos.some(e => e.key === "dilacerante");
   if (temLanc && !temDilac) {
     ui.notifications.warn("Lancinante requer o encanto Dilacerante na arma — sem ele, não há +10 de crítico para multiplicar.");
   }
+}
+
+export async function sincronizarLancinante(item) {
+  if (!item.system?.upgrades) return;
+  const d = dadosDoItem(item);
+  const patch = marcadorLancinante(item, d);
+  if (patch) await item.update(patch, { render: false });
+  avisarLancinante(d);
 }
 
 /* ------------------------------------------------------------------ */
@@ -204,44 +230,70 @@ function checarConflitos(item, def) {
  * para itens que já estão na ficha. Sem ator, ficam pendentes e são
  * criados pelo hook createItem quando o item entrar numa ficha.
  */
-async function criarEfeitosDaEntrada(item, key, def, id, opcoes = {}) {
-  let efeitos;
-  if (def.especial === "ameacadora") efeitos = efeitoAmeacadora(item, id);
-  else efeitos = montarEfeitosAE(key, def, id, item, opcoes);
-  if (!efeitos.length) return;
+function montarEfeitosDaEntrada(item, key, def, id, opcoes = {}) {
+  const efeitos = def.especial === "ameacadora"
+    ? efeitoAmeacadora(item, id)
+    : montarEfeitosAE(key, def, id, item, opcoes);
 
-  const doItem = efeitos.filter(e => e.flags?.[MODULO]?.alvo !== "ator");
-  const doAtor = efeitos.filter(e => e.flags?.[MODULO]?.alvo === "ator");
-
-  if (doItem.length) await item.createEmbeddedDocuments("ActiveEffect", doItem, { render: false });
-
-  if (doAtor.length && item.actor) {
-    for (const e of doAtor) {
-      e.origin = item.uuid;
-      e.flags[MODULO].itemId = item.id;
-    }
-    // Sem render: false — criar o efeito no ator dispara a re-preparação
-    // dos dados derivados (Defesa, RD…) e re-renderiza a ficha do ator na
-    // hora, sem precisar desequipar/reequipar.
-    await item.actor.createEmbeddedDocuments("ActiveEffect", doAtor);
-    refrescarAtor(item.actor);
+  const doItem = [];
+  const doAtor = [];
+  for (const e of efeitos) {
+    if (e.flags?.[MODULO]?.alvo !== "ator") { doItem.push(e); continue; }
+    // Sem ator, efeitos de ator ficam pendentes — o hook createItem os cria
+    // quando o item entrar numa ficha.
+    if (!item.actor) continue;
+    e.origin = item.uuid;
+    e.flags[MODULO].itemId = item.id;
+    doAtor.push(e);
   }
+  return { doItem, doAtor };
 }
 
-async function excluirEfeitosDaEntrada(item, id) {
-  const noItem = [...item.effects].filter(e => e.flags?.[MODULO]?.entradaId === id);
-  if (noItem.length) {
-    await item.deleteEmbeddedDocuments("ActiveEffect", noItem.map(e => e.id), { render: false });
+/** Ids dos efeitos (no item e no ator) originados por certas entradas. */
+function efeitosDasEntradas(item, ids) {
+  const alvo = new Set(ids);
+  const noItem = [...item.effects]
+    .filter(e => alvo.has(e.flags?.[MODULO]?.entradaId))
+    .map(e => e.id);
+  const noAtor = item.actor
+    ? [...item.actor.effects]
+      .filter(e => alvo.has(e.flags?.[MODULO]?.entradaId) && e.flags?.[MODULO]?.itemId === item.id)
+      .map(e => e.id)
+    : [];
+  return { noItem, noAtor };
+}
+
+/**
+ * Executa todas as operações de Efeito Ativo de uma ação em UMA ida ao
+ * banco por coleção, com item e ator em paralelo — antes cada criação e
+ * cada exclusão era um await sequencial (cada uma custa um round-trip de
+ * socket), o que dominava o atraso ao adicionar uma melhoria.
+ */
+async function aplicarEfeitos(item, { criarItem = [], apagarItem = [], criarAtor = [], apagarAtor = [] } = {}) {
+  const ator = item.actor;
+  const mexeNoAtor = !!ator && (criarAtor.length > 0 || apagarAtor.length > 0);
+  const tarefas = [];
+
+  if (apagarItem.length || criarItem.length) {
+    tarefas.push((async () => {
+      if (apagarItem.length) await item.deleteEmbeddedDocuments("ActiveEffect", apagarItem, { render: false });
+      if (criarItem.length) await item.createEmbeddedDocuments("ActiveEffect", criarItem, { render: false });
+    })());
   }
-  if (item.actor) {
-    const noAtor = [...item.actor.effects].filter(e =>
-      e.flags?.[MODULO]?.entradaId === id && e.flags?.[MODULO]?.itemId === item.id
-    );
-    if (noAtor.length) {
-      await item.actor.deleteEmbeddedDocuments("ActiveEffect", noAtor.map(e => e.id));
-      refrescarAtor(item.actor);
-    }
+  if (mexeNoAtor) {
+    tarefas.push((async () => {
+      if (apagarAtor.length) await ator.deleteEmbeddedDocuments("ActiveEffect", apagarAtor, { render: false });
+      if (criarAtor.length) await ator.createEmbeddedDocuments("ActiveEffect", criarAtor, { render: false });
+    })());
   }
+  if (!tarefas.length) return;
+
+  await Promise.all(tarefas);
+
+  // Uma única re-preparação/re-render do ator no fim, em vez de uma por
+  // operação: os dados derivados (Defesa, RD…) voltam atualizados sem
+  // precisar desequipar/reequipar o item.
+  if (mexeNoAtor) refrescarAtor(ator);
 }
 
 /** Força o ator a recalcular os dados derivados e re-renderizar a ficha. */
@@ -264,11 +316,10 @@ export async function sincronizarEfeitosAtor(item) {
   const ator = item.actor;
   if (!ator) return;
 
-  // Limpa cópias antigas deste item (ids antigos de outra ficha)
-  const antigos = [...ator.effects].filter(e => e.flags?.[MODULO]?.itemId === item.id);
-  if (antigos.length) {
-    await ator.deleteEmbeddedDocuments("ActiveEffect", antigos.map(e => e.id), { render: false });
-  }
+  // Cópias antigas deste item (ids antigos de outra ficha)
+  const antigos = [...ator.effects]
+    .filter(e => e.flags?.[MODULO]?.itemId === item.id)
+    .map(e => e.id);
 
   const d = dadosDoItem(item);
   const novos = [];
@@ -284,14 +335,18 @@ export async function sincronizarEfeitosAtor(item) {
       novos.push(ef);
     }
   }
-  if (novos.length) {
-    await ator.createEmbeddedDocuments("ActiveEffect", novos);
-    refrescarAtor(ator);
-  }
 
   // Reafirma o marcador nativo do Lancinante (itens copiados/arrastados
-  // podem chegar com as flags do módulo mas sem o marcador em upgrades).
-  await sincronizarLancinante(item);
+  // podem chegar com as flags do módulo mas sem o marcador em upgrades)
+  // no mesmo update — sem uma segunda ida ao banco.
+  const patch = marcadorLancinante(item, d);
+
+  await Promise.all([
+    patch ? item.update(patch, { render: false }) : null,
+    aplicarEfeitos(item, { apagarAtor: antigos, criarAtor: novos })
+  ].filter(Boolean));
+
+  avisarLancinante(d);
 }
 
 /** Remove do ator os efeitos originados de um item (item excluído/removido). */
@@ -302,19 +357,22 @@ export async function removerEfeitosAtorDoItem(ator, itemId) {
   }
 }
 
-/** Retorna a entrada já presente no item que substitui `key` (ou null). */
-function quemSubstitui(item, key, ignorarId = null) {
-  const d = dadosDoItem(item);
-  for (const e of [...d.melhorias, ...d.encantos]) {
+/** Retorna a entrada da lista dada que substitui `key` (ou null). */
+function quemSubstituiEm(entradas, key, ignorarId = null) {
+  for (const e of entradas) {
     if (e.id === ignorarId) continue;
-    const def = obterEntrada(e.key);
-    if (def?.substitui?.includes(key)) return e;
+    if (obterEntrada(e.key)?.substitui?.includes(key)) return e;
   }
   return null;
 }
 
-async function salvarLista(item, lista, valor) {
-  await item.update({ [`flags.${MODULO}.${lista}`]: valor }, { render: false });
+/** Cópia editável das listas de entradas do item. */
+function clonarListas(d) {
+  return {
+    melhorias: foundry.utils.deepClone(d.melhorias),
+    encantos: foundry.utils.deepClone(d.encantos),
+    materiais: foundry.utils.deepClone(d.materiais)
+  };
 }
 
 /**
@@ -334,49 +392,69 @@ export async function adicionarEntrada(item, key, opcoes = {}) {
   const avisoC = checarConflitos(item, def);
   if (avisoC) ui.notifications.warn(`${def.nome}: ${avisoC} (adicionado mesmo assim).`);
 
-  await garantirPrecoBase(item);
+  /* Todo o novo estado é calculado em memória e gravado de uma vez só:
+   * antes eram até seis item.update()/create() encadeados, cada um com
+   * seu round-trip — a origem do travamento ao adicionar melhorias. */
+  const d = dadosDoItem(item);
+  const listas = clonarListas(d);
+  const mudou = new Set([lista]);
 
   const id = foundry.utils.randomID(8);
 
   // Já existe algo que substitui esta entrada? (ex.: adicionar Cruel
   // com Atroz presente): entra suprimida, sem efeitos.
-  const suprimidaPor = quemSubstitui(item, key);
+  const suprimidaPor = quemSubstituiEm([...listas.melhorias, ...listas.encantos], key);
 
   const registro = { id, key };
   if (opcoes.pericia) registro.pericia = opcoes.pericia;
   if (suprimidaPor) registro.suprimidaPor = suprimidaPor.id;
+  listas[lista].push(registro);
 
-  const atual = foundry.utils.deepClone(item.getFlag(MODULO, lista) ?? []);
-  atual.push(registro);
-  await salvarLista(item, lista, atual);
+  // Esta entrada substitui outras já presentes? Suprime os efeitos delas.
+  const idsSuprimidos = [];
+  if (def.substitui?.length) {
+    for (const nomeLista of ["melhorias", "encantos"]) {
+      for (const e of listas[nomeLista]) {
+        if (e.id === id || e.suprimidaPor) continue;
+        if (!def.substitui.includes(e.key)) continue;
+        e.suprimidaPor = id;
+        idsSuprimidos.push(e.id);
+        mudou.add(nomeLista);
+        const nomeAlvo = obterEntrada(e.key)?.nome ?? e.key;
+        ui.notifications.info(`${def.nome} substitui ${nomeAlvo}: o bônus anterior foi suprimido (não acumula).`);
+      }
+    }
+  }
 
   if (suprimidaPor) {
     const nomeSup = obterEntrada(suprimidaPor.key)?.nome ?? suprimidaPor.key;
     ui.notifications.info(`${def.nome}: bônus substituído por ${nomeSup} (não acumula).`);
-  } else {
-    await criarEfeitosDaEntrada(item, key, def, id, opcoes);
   }
 
-  // Esta entrada substitui outras já presentes? Suprime os efeitos delas.
-  if (def.substitui?.length) {
-    for (const nomeLista of ["melhorias", "encantos"]) {
-      const itens = foundry.utils.deepClone(item.getFlag(MODULO, nomeLista) ?? []);
-      let mudou = false;
-      for (const e of itens) {
-        if (e.id === id || e.suprimidaPor) continue;
-        if (!def.substitui.includes(e.key)) continue;
-        await excluirEfeitosDaEntrada(item, e.id);
-        e.suprimidaPor = id;
-        mudou = true;
-        const nomeAlvo = obterEntrada(e.key)?.nome ?? e.key;
-        ui.notifications.info(`${def.nome} substitui ${nomeAlvo}: o bônus anterior foi suprimido (não acumula).`);
-      }
-      if (mudou) await salvarLista(item, nomeLista, itens);
-    }
-  }
+  // Estado futuro do item — inclui o preço base capturado na 1ª adição.
+  const dNovo = { ...d, ...listas, precoBase: d.precoBase ?? precoBaseInicial(item) };
 
-  if (def.especial === "lancinante" || key === "lancinante") await sincronizarLancinante(item);
-  await atualizarPreco(item);
+  const payload = {};
+  for (const nomeLista of mudou) payload[`flags.${MODULO}.${nomeLista}`] = listas[nomeLista];
+  if (d.precoBase === null) payload[`flags.${MODULO}.precoBase`] = dNovo.precoBase;
+  Object.assign(payload, precoAtualizado(item, dNovo) ?? {});
+  Object.assign(payload, marcadorLancinante(item, dNovo) ?? {});
+
+  const novos = suprimidaPor
+    ? { doItem: [], doAtor: [] }
+    : montarEfeitosDaEntrada(item, key, def, id, opcoes);
+  const antigos = idsSuprimidos.length
+    ? efeitosDasEntradas(item, idsSuprimidos)
+    : { noItem: [], noAtor: [] };
+
+  await item.update(payload, { render: false });
+  await aplicarEfeitos(item, {
+    criarItem: novos.doItem, criarAtor: novos.doAtor,
+    apagarItem: antigos.noItem, apagarAtor: antigos.noAtor
+  });
+
+  // Aviso só ao adicionar o próprio Lancinante — não a cada melhoria.
+  if (key === "lancinante" || def.especial === "lancinante") avisarLancinante(dNovo);
 
   if (def.especial === "alquimica") {
     ui.notifications.info("Injeção Alquímica: clique com o botão direito na arma (na ficha do personagem) para carregar preparados.");
@@ -389,69 +467,86 @@ export async function adicionarMaterial(item, key, custoManual = null) {
   const def = obterMateriais()[key];
   if (!def) return ui.notifications.error(`Material desconhecido: ${key}`);
 
-  await garantirPrecoBase(item);
-
   const catPreco = categoriaMaterialDoItem(item);
-  let custo = custoManual !== null ? Number(custoManual) || 0 : (def.precos?.[catPreco] ?? 0);
+  const custo = custoManual !== null ? Number(custoManual) || 0 : (def.precos?.[catPreco] ?? 0);
   if (custoManual === null && !def.precos?.[catPreco] && !def.raro) {
     // Material sem preço para esta categoria (ex.: madeira tollon em armadura)
     ui.notifications.warn(`${def.nome}: sem preço tabelado para esta categoria de item — ajuste o custo manualmente.`);
   }
 
+  const d = dadosDoItem(item);
   const id = foundry.utils.randomID(8);
-  const atual = foundry.utils.deepClone(item.getFlag(MODULO, "materiais") ?? []);
-  atual.push({ id, key, custo });
-  await item.update({ [`flags.${MODULO}.materiais`]: atual }, { render: false });
+  const materiais = [...foundry.utils.deepClone(d.materiais), { id, key, custo }];
+  const dNovo = { ...d, materiais, precoBase: d.precoBase ?? precoBaseInicial(item) };
 
-  const efeitos = montarEfeitosAE(key, { ...def, tipo: "material" }, id, item);
-  if (efeitos.length) await item.createEmbeddedDocuments("ActiveEffect", efeitos, { render: false });
+  const payload = { [`flags.${MODULO}.materiais`]: materiais };
+  if (d.precoBase === null) payload[`flags.${MODULO}.precoBase`] = dNovo.precoBase;
+  Object.assign(payload, precoAtualizado(item, dNovo) ?? {});
 
-  await atualizarPreco(item);
+  const { doItem, doAtor } = montarEfeitosDaEntrada(item, key, { ...def, tipo: "material" }, id);
+
+  await item.update(payload, { render: false });
+  await aplicarEfeitos(item, { criarItem: doItem, criarAtor: doAtor });
   return id;
 }
 
 /** Remove uma entrada (melhoria/encanto/material) e seus efeitos. */
 export async function removerEntrada(item, lista, id) {
-  const atual = foundry.utils.deepClone(item.getFlag(MODULO, lista) ?? []);
-  const entrada = atual.find(e => e.id === id);
+  const d = dadosDoItem(item);
+  const listas = clonarListas(d);
+  const entrada = listas[lista]?.find(e => e.id === id);
   if (!entrada) return;
 
-  await salvarLista(item, lista, atual.filter(e => e.id !== id));
-  await excluirEfeitosDaEntrada(item, id);
+  listas[lista] = listas[lista].filter(e => e.id !== id);
+  const mudou = new Set([lista]);
 
   // Restaura entradas que estavam suprimidas por esta (ex.: remover
   // Atroz devolve o +1 de Cruel) — a menos que outra entrada presente
   // também as substitua.
+  const criarItem = [];
+  const criarAtor = [];
   for (const nomeLista of ["melhorias", "encantos"]) {
-    const itens = foundry.utils.deepClone(item.getFlag(MODULO, nomeLista) ?? []);
-    let mudou = false;
-    for (const e of itens) {
+    for (const e of listas[nomeLista]) {
       if (e.suprimidaPor !== id) continue;
-      const outro = quemSubstitui(item, e.key, e.id);
+      mudou.add(nomeLista);
+      const outro = quemSubstituiEm([...listas.melhorias, ...listas.encantos], e.key, e.id);
       if (outro) {
         e.suprimidaPor = outro.id;
-      } else {
-        delete e.suprimidaPor;
-        const defRestaurada = obterEntrada(e.key);
-        if (defRestaurada) await criarEfeitosDaEntrada(item, e.key, defRestaurada, e.id, { pericia: e.pericia });
-        const nomeRest = defRestaurada?.nome ?? e.key;
-        ui.notifications.info(`${nomeRest}: bônus restaurado.`);
+        continue;
       }
-      mudou = true;
+      delete e.suprimidaPor;
+      const defRestaurada = obterEntrada(e.key);
+      if (defRestaurada) {
+        const efs = montarEfeitosDaEntrada(item, e.key, defRestaurada, e.id, { pericia: e.pericia });
+        criarItem.push(...efs.doItem);
+        criarAtor.push(...efs.doAtor);
+      }
+      ui.notifications.info(`${defRestaurada?.nome ?? e.key}: bônus restaurado.`);
     }
-    if (mudou) await salvarLista(item, nomeLista, itens);
   }
 
-  if (entrada.key === "lancinante") await sincronizarLancinante(item);
-  await atualizarPreco(item);
+  const dNovo = { ...d, ...listas };
+  const payload = {};
+  for (const nomeLista of mudou) payload[`flags.${MODULO}.${nomeLista}`] = listas[nomeLista];
+  Object.assign(payload, precoAtualizado(item, dNovo) ?? {});
+  Object.assign(payload, marcadorLancinante(item, dNovo) ?? {});
+
+  const { noItem, noAtor } = efeitosDasEntradas(item, [id]);
+
+  await item.update(payload, { render: false });
+  await aplicarEfeitos(item, { criarItem, criarAtor, apagarItem: noItem, apagarAtor: noAtor });
 }
 
 /** Atualiza o custo manual de um material. */
 export async function atualizarCustoMaterial(item, id, custo) {
-  const atual = foundry.utils.deepClone(item.getFlag(MODULO, "materiais") ?? []);
-  const m = atual.find(e => e.id === id);
+  const d = dadosDoItem(item);
+  const materiais = foundry.utils.deepClone(d.materiais);
+  const m = materiais.find(e => e.id === id);
   if (!m) return;
   m.custo = Math.max(0, Number(custo) || 0);
-  await item.update({ [`flags.${MODULO}.materiais`]: atual }, { render: false });
-  await atualizarPreco(item);
+  const dNovo = { ...d, materiais };
+  await item.update({
+    [`flags.${MODULO}.materiais`]: materiais,
+    ...(precoAtualizado(item, dNovo) ?? {})
+  }, { render: false });
 }

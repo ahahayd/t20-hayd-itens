@@ -1,7 +1,7 @@
 /**
  * t20-hayd-itens | catalogo.mjs
  * Catálogo completo de Melhorias, Encantos e Materiais Especiais do
- * Tormenta20 — Livro Básico (LB), Ameaças de Arton (AA), Heróis de
+ * Tormenta20 — Livro Básico (T20), Ameaças de Arton (AA), Heróis de
  * Arton (HA) e Deuses de Arton (DA).
  *
  * Formato dos efeitos (shorthand → ActiveEffect via montarEfeitosAE):
@@ -91,7 +91,7 @@ export function categoriaMaterialDoItem(item) {
 }
 
 /* ================================================================== */
-/* Tabelas de preço (LB p.164 e p.334; munições pela metade, LB p.178)*/
+/* Tabelas de preço (T20 p.164 e p.334; munições pela metade, T20 p.178)*/
 /* ================================================================== */
 
 /**
@@ -136,45 +136,45 @@ export const CONDICOES = {
 /* ================================================================== */
 
 export const MELHORIAS = {
-  /* ---------------- Armas (LB / AA / HA / DA) ---------------- */
-  "certeira": { nome: "Certeira", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.164",
+  /* ---------------- Armas (T20 / AA / HA / DA) ---------------- */
+  "certeira": { nome: "Certeira", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.164",
     beneficio: "+1 nos testes de ataque",
     efeitos: [{ changes: [{ key: "ataque", value: "1" }] }] },
 
-  "pungente": { nome: "Pungente", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.165",
+  "pungente": { nome: "Pungente", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.165",
     beneficio: "+2 nos testes de ataque (substitui o bônus de Certeira)", prereqs: ["certeira"], substitui: ["certeira"],
     efeitos: [{ changes: [{ key: "ataque", value: "2" }] }] },
 
-  "cruel": { nome: "Cruel", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.164",
+  "cruel": { nome: "Cruel", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.164",
     beneficio: "+1 nas rolagens de dano",
     efeitos: [{ changes: [{ key: "dano", value: "1" }] }] },
 
-  "atroz": { nome: "Atroz", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.164",
+  "atroz": { nome: "Atroz", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.164",
     beneficio: "+2 nas rolagens de dano (substitui o bônus de Cruel)", prereqs: ["cruel"], substitui: ["cruel"],
     efeitos: [{ changes: [{ key: "dano", value: "2" }] }] },
 
-  "equilibrada": { nome: "Equilibrada", tipo: "melhoria", cats: ["arma"], fonte: "LB p.165",
+  "equilibrada": { nome: "Equilibrada", tipo: "melhoria", cats: ["arma"], fonte: "T20 p.165",
     beneficio: "+2 em testes de manobras de combate (desarmar, quebrar…)",
     efeitos: [{ changes: [{ key: "ataque", value: "2" }],
       opcional: true, desc: "Use somente em testes de manobras de combate (desarmar, quebrar, derrubar…)" }] },
 
-  "harmonizada": { nome: "Harmonizada", tipo: "melhoria", cats: ["arma"], fonte: "LB p.165",
+  "harmonizada": { nome: "Harmonizada", tipo: "melhoria", cats: ["arma"], fonte: "T20 p.165",
     beneficio: "Uma habilidade de ataque escolhida custa −1 PM com esta arma", prereqs: ["*"],
     efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo de uma habilidade ativada junto ao ataque" }] },
 
-  "injecao-alquimica": { nome: "Injeção Alquímica", tipo: "melhoria", cats: ["arma"], fonte: "LB p.165",
+  "injecao-alquimica": { nome: "Injeção Alquímica", tipo: "melhoria", cats: ["arma"], fonte: "T20 p.165",
     beneficio: "Ao acertar, libera uma dose de preparado carregada na arma (2 doses; clique direito na arma para carregar)",
     especial: "alquimica", efeitos: [] },
 
-  "macica": { nome: "Maciça", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.165",
+  "macica": { nome: "Maciça", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.165",
     beneficio: "+1 no multiplicador de crítico (não pode ser Precisa)", conflita: ["precisa"],
     efeitos: [{ changes: [{ key: "criticoX", value: "1" }] }] },
 
-  "mira-telescopica": { nome: "Mira Telescópica", tipo: "melhoria", cats: ["arma"], fonte: "LB p.165",
+  "mira-telescopica": { nome: "Mira Telescópica", tipo: "melhoria", cats: ["arma"], fonte: "T20 p.165",
     beneficio: "Aumenta o alcance da arma em uma categoria (só armas de disparo, exceto fundas)",
     nota: "Ajuste o alcance manualmente na ficha da arma", efeitos: [] },
 
-  "precisa": { nome: "Precisa", tipo: "melhoria", cats: ["arma", "municao"], fonte: "LB p.165",
+  "precisa": { nome: "Precisa", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.165",
     beneficio: "+1 na margem de ameaça (não pode ser Maciça)", conflita: ["macica"],
     efeitos: [{ changes: [{ key: "criticoM", value: "-1" }] }] },
 
@@ -211,44 +211,44 @@ export const MELHORIAS = {
     efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo de Abençoar Arma usada nesta arma" }] },
 
   /* ---------------- Armaduras e Escudos ---------------- */
-  "ajustada": { nome: "Ajustada", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "LB p.164",
+  "ajustada": { nome: "Ajustada", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "T20 p.164",
     beneficio: "Penalidade de armadura −1",
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.pda", value: "1" }],
       desc: "Reduz a penalidade de armadura em 1" }] },
 
-  "sob-medida": { nome: "Sob Medida", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "LB p.165",
+  "sob-medida": { nome: "Sob Medida", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "T20 p.165",
     beneficio: "Penalidade de armadura −2, apenas para o usuário específico (substitui o bônus de Ajustada)",
     prereqs: ["ajustada"], substitui: ["ajustada"],
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.pda", value: "2" }],
       desc: "Reduz a penalidade de armadura em 2 (apenas para o dono)" }] },
 
-  "delicada": { nome: "Delicada", tipo: "melhoria", cats: ["armadura"], fonte: "LB p.164",
+  "delicada": { nome: "Delicada", tipo: "melhoria", cats: ["armadura"], fonte: "T20 p.164",
     beneficio: "Permite aplicar 1 ponto de Destreza na Defesa (só armadura pesada; não pode ser Reforçada)",
     conflita: ["reforcada"], nota: "Ajuste o limite de Destreza manualmente", efeitos: [] },
 
-  "espinhosa-armadura": { nome: "Espinhosa (Armadura)", tipo: "melhoria", cats: ["armadura"], fonte: "LB p.164",
+  "espinhosa-armadura": { nome: "Espinhosa (Armadura)", tipo: "melhoria", cats: ["armadura"], fonte: "T20 p.164",
     beneficio: "Ao agarrar/ser agarrado, causa dano de perfuração igual à sua Força",
     nota: "Role o dano manualmente nas manobras de agarrar", efeitos: [] },
 
-  "espinhoso-escudo": { nome: "Espinhoso (Escudo)", tipo: "melhoria", cats: ["escudo"], fonte: "LB p.164",
+  "espinhoso-escudo": { nome: "Espinhoso (Escudo)", tipo: "melhoria", cats: ["escudo"], fonte: "T20 p.164",
     beneficio: "Aumenta o dano de um ataque com o escudo em um passo",
     efeitos: [{ changes: [{ key: "passos", value: "1", mode: 0 }],
       opcional: true, desc: "Use ao atacar com o escudo" }] },
 
-  "polida": { nome: "Polida", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "LB p.165",
+  "polida": { nome: "Polida", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "T20 p.165",
     beneficio: "+5 na Defesa na primeira rodada de combate (ambientes iluminados)",
     efeitos: [{ nome: "Polida (1ª rodada)", condicaoLivre: true, rodadas: 1,
       changes: [{ key: "system.attributes.defesa.bonus", value: "5" }],
       opcional: true, desc: "Ative na primeira rodada de combate em ambiente iluminado" }] },
 
-  "reforcada": { nome: "Reforçada", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "LB p.165",
+  "reforcada": { nome: "Reforçada", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "T20 p.165",
     beneficio: "+1 na Defesa e +1 na penalidade de armadura (não pode ser Delicada)", conflita: ["delicada"],
     efeitos: [{ passivo: true, changes: [
       { key: "system.attributes.defesa.bonus", value: "1" },
       { key: "system.attributes.defesa.pda", value: "-1" }
     ] }] },
 
-  "selada": { nome: "Selada", tipo: "melhoria", cats: ["armadura"], fonte: "LB p.165",
+  "selada": { nome: "Selada", tipo: "melhoria", cats: ["armadura"], fonte: "T20 p.165",
     beneficio: "+1 nos testes de resistência (só armaduras pesadas)",
     efeitos: [{ passivo: true, changes: [{ key: "system.modificadores.pericias.resistencia", value: "+1" }] }] },
 
@@ -275,23 +275,23 @@ export const MELHORIAS = {
     efeitos: [{ passivo: true, changes: [{ key: "system.modificadores.pericias.resistencia", value: "+1" }] }] },
 
   /* ---------------- Esotéricos ---------------- */
-  "canalizador": { nome: "Canalizador", tipo: "melhoria", cats: ["esoterico"], fonte: "LB p.164",
+  "canalizador": { nome: "Canalizador", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.164",
     beneficio: "+1 no limite de PM que pode gastar por magia",
     nota: "Limite de PM não é automatizável; aplique manualmente", efeitos: [] },
 
-  "energetico": { nome: "Energético", tipo: "melhoria", cats: ["esoterico"], fonte: "LB p.164",
+  "energetico": { nome: "Energético", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.164",
     beneficio: "Suas magias que causam dano causam +1d6 do mesmo tipo",
     efeitos: [{ spell: true, changes: [{ key: "dano", value: "1d6" }] }] },
 
-  "harmonizado-esoterico": { nome: "Harmonizado (Esotérico)", tipo: "melhoria", cats: ["esoterico"], fonte: "LB p.165",
+  "harmonizado-esoterico": { nome: "Harmonizado (Esotérico)", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.165",
     beneficio: "Uma magia escolhida custa −1 PM",
     efeitos: [{ spell: true, custo: "-1", desc: "Reduz em −1 PM o custo da magia escolhida" }] },
 
-  "poderoso": { nome: "Poderoso", tipo: "melhoria", cats: ["esoterico"], fonte: "LB p.165",
+  "poderoso": { nome: "Poderoso", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.165",
     beneficio: "+1 na CD para resistir às suas magias",
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.cd", value: "1" }] }] },
 
-  "vigilante": { nome: "Vigilante", tipo: "melhoria", cats: ["esoterico"], fonte: "LB p.165",
+  "vigilante": { nome: "Vigilante", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.165",
     beneficio: "+2 na Defesa",
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "2" }] }] },
 
@@ -301,7 +301,7 @@ export const MELHORIAS = {
     nota: "Limite de PM não é automatizável; aplique manualmente", efeitos: [] },
 
   /* ---------------- Ferramentas e Vestuário ---------------- */
-  "aprimorado": { nome: "Aprimorado", tipo: "melhoria", cats: ["ferramenta", "vestuario"], fonte: "LB p.164",
+  "aprimorado": { nome: "Aprimorado", tipo: "melhoria", cats: ["ferramenta", "vestuario"], fonte: "T20 p.164",
     beneficio: "+1 em testes da perícia modificada pelo item", escolhePericia: true,
     efeitos: [{ skill: true, changes: [{ key: "roll", value: "1" }],
       desc: "+1 na rolagem da perícia modificada pelo item" }] },
@@ -319,19 +319,19 @@ export const MELHORIAS = {
     efeitos: [] },
 
   /* ---------------- Qualquer categoria ---------------- */
-  "banhado-a-ouro": { nome: "Banhado a Ouro", tipo: "melhoria", cats: ["geral"], fonte: "LB p.164",
+  "banhado-a-ouro": { nome: "Banhado a Ouro", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.164",
     beneficio: "+2 em Diplomacia",
     efeitos: [{ passivo: true, changes: [{ key: "system.pericias.dipl.bonus", value: "2" }] }] },
 
-  "cravejado-de-gemas": { nome: "Cravejado de Gemas", tipo: "melhoria", cats: ["geral"], fonte: "LB p.164",
+  "cravejado-de-gemas": { nome: "Cravejado de Gemas", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.164",
     beneficio: "+2 em Enganação",
     efeitos: [{ passivo: true, changes: [{ key: "system.pericias.enga.bonus", value: "2" }] }] },
 
-  "discreto": { nome: "Discreto", tipo: "melhoria", cats: ["geral"], fonte: "LB p.164",
+  "discreto": { nome: "Discreto", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.164",
     beneficio: "Ocupa −1 espaço (mínimo 1) e +5 em Ladinagem para ser ocultado", conflita: ["brasonado"],
     efeitos: [] },
 
-  "macabro": { nome: "Macabro", tipo: "melhoria", cats: ["geral"], fonte: "LB p.165",
+  "macabro": { nome: "Macabro", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.165",
     beneficio: "+2 em Intimidação, −2 em Diplomacia",
     efeitos: [{ passivo: true, changes: [
       { key: "system.pericias.inti.bonus", value: "2" },
@@ -358,26 +358,26 @@ export const MELHORIAS = {
 
 export const ENCANTOS = {
   /* ---------------- Armas — Livro Básico ---------------- */
-  "ameacadora": { nome: "Ameaçadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "ameacadora": { nome: "Ameaçadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Duplica a margem de ameaça da arma (aplicada antes de outros aumentos)",
     especial: "ameacadora", efeitos: [] },
 
-  "anticriatura": { nome: "Anticriatura", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "anticriatura": { nome: "Anticriatura", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "1×/rodada, 2 PM ao atacar o tipo de criatura escolhido: +4d8 de dano se acertar",
     efeitos: [{ custo: "2", changes: [{ key: "dano", value: "4d8" }],
       desc: "Use somente contra o tipo de criatura da arma" }] },
 
-  "arremesso": { nome: "Arremesso", tipo: "encanto", cats: ["arma"], fonte: "LB p.335",
+  "arremesso": { nome: "Arremesso", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
     beneficio: "Pode ser arremessada em alcance curto (ou +1 categoria) e volta voando", efeitos: [] },
 
-  "assassina": { nome: "Assassina", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "assassina": { nome: "Assassina", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Dados de ataque furtivo viram d8; 2 PM para rolar novamente resultados 1 no furtivo",
     efeitos: [{ custo: "2", desc: "Ao usar Ataque Furtivo: dados d8 e rola novamente resultados 1" }] },
 
-  "cacadora": { nome: "Caçadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "cacadora": { nome: "Caçadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Ignora camuflagem leve/total e cobertura leve; +1 categoria de alcance à distância", efeitos: [] },
 
-  "congelante": { nome: "Congelante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "congelante": { nome: "Congelante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de frio; 1×/rodada, 2 PM: se acertar, enreda a vítima por 1 rodada",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[frio]" }] },
@@ -385,44 +385,44 @@ export const ENCANTOS = {
         desc: "1×/rodada: se o ataque acertar, a vítima fica enredada por 1 rodada" }
     ] },
 
-  "conjuradora": { nome: "Conjuradora", tipo: "encanto", cats: ["arma"], fonte: "LB p.335",
+  "conjuradora": { nome: "Conjuradora", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
     beneficio: "Guarda uma magia; ao acertar, descarrega-a como ação livre sem custo", efeitos: [] },
 
-  "corrosiva": { nome: "Corrosiva", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "corrosiva": { nome: "Corrosiva", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de ácido; 1×/rodada, 2 PM: se acertar, a vítima sofre 4d4 de ácido na próxima rodada",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[acido]" }] },
       { nome: "Corrosão persistente", custo: "2", desc: "1×/rodada: a vítima sofre 4d4 de ácido no início da próxima rodada dela" }
     ] },
 
-  "dancarina": { nome: "Dançarina", tipo: "encanto", cats: ["arma"], fonte: "LB p.335",
+  "dancarina": { nome: "Dançarina", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
     beneficio: "Ação de movimento + 1 PM: a arma flutua e ataca sozinha em alcance curto (sustentada)", efeitos: [] },
 
-  "defensora": { nome: "Defensora", tipo: "encanto", cats: ["arma"], fonte: "LB p.335",
+  "defensora": { nome: "Defensora", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
     beneficio: "+2 na Defesa",
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "2" }] }] },
 
-  "destruidora": { nome: "Destruidora", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "destruidora": { nome: "Destruidora", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+2 no ataque e +2d8 de dano contra construtos e objetos",
     efeitos: [{ changes: [{ key: "ataque", value: "2" }, { key: "dano", value: "2d8" }],
       opcional: true, desc: "Use somente contra construtos e objetos" }] },
 
-  "dilacerante": { nome: "Dilacerante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "dilacerante": { nome: "Dilacerante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Acerto crítico causa +10 pontos de dano",
     efeitos: [{ changes: [{ key: "danoCritico", value: "10" }] }] },
 
-  "drenante": { nome: "Drenante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "drenante": { nome: "Drenante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Crítico em criatura viva: ela fica fraca e você ganha 2d10 PV temporários",
     efeitos: [{ condicao: "fraco", opcional: true, desc: "Aplique em um acerto crítico; role 2d10 PV temporários para você" }] },
 
-  "eletrica": { nome: "Elétrica", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "eletrica": { nome: "Elétrica", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de eletricidade; 1×/rodada, 2 PM: raio de 3d8 em outra criatura em alcance curto",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[eletricidade]" }] },
       { nome: "Raio secundário", custo: "2", desc: "1×/rodada: um raio causa 3d8 de eletricidade em outra criatura em alcance curto" }
     ] },
 
-  "energetica": { nome: "Energética", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "energetica": { nome: "Energética", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+4 no ataque, ignora 20 de RD e converte o dano em essência; emana luz",
     prereqs: ["formidavel"],
     efeitos: [{ changes: [
@@ -431,54 +431,54 @@ export const ENCANTOS = {
       { key: "tipoDano", value: "essencia", mode: 5 }
     ] }] },
 
-  "excruciante": { nome: "Excruciante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "excruciante": { nome: "Excruciante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Criatura viva atingida fica fraca (se já fraca, debilitada)",
     efeitos: [{ condicao: "fraco", desc: "Aplique à criatura viva atingida (se já fraca, aplique Debilitado)" }] },
 
-  "flamejante": { nome: "Flamejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.335",
+  "flamejante": { nome: "Flamejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de fogo; 1×/rodada, 2 PM: em vez do ataque, bola de fogo 6d6 em alcance médio",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[fogo]" }] },
       { nome: "Bola de fogo", custo: "2", desc: "Em vez de atacar: 6d6 de fogo em alcance médio (Reflexos CD For/Des reduz à metade)" }
     ] },
 
-  "formidavel": { nome: "Formidável", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "formidavel": { nome: "Formidável", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+2 em testes de ataque e rolagens de dano",
     efeitos: [{ changes: [{ key: "ataque", value: "2" }, { key: "dano", value: "2" }] }] },
 
-  "lancinante": { nome: "Lancinante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "lancinante": { nome: "Lancinante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "No acerto crítico, o +10 do Dilacerante também é multiplicado pelo multiplicador de crítico (regra revisada), ou multiplica todos os bônus numéricos (regra original) — conforme a configuração do sistema. Requer Dilacerante ativo na arma",
     prereqs: ["dilacerante"], especial: "lancinante", efeitos: [] },
 
-  "magnifica": { nome: "Magnífica", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "magnifica": { nome: "Magnífica", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+4 em testes de ataque e rolagens de dano (substitui Formidável — bônus não acumulam)",
     prereqs: ["formidavel"], substitui: ["formidavel"],
     efeitos: [{ changes: [{ key: "ataque", value: "4" }, { key: "dano", value: "4" }] }] },
 
-  "piedosa": { nome: "Piedosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "piedosa": { nome: "Piedosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+1d8 de dano e todo o dano se torna não letal (1 PM para ativar/desativar)",
     efeitos: [{ custo: "1", changes: [{ key: "dano", value: "1d8" }],
       desc: "+1d8 e todo o dano é não letal enquanto ativa" }] },
 
-  "profana": { nome: "Profana", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "profana": { nome: "Profana", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+2d8 contra devotos do Bem e criaturas bondosas",
     efeitos: [{ changes: [{ key: "dano", value: "2d8" }],
       opcional: true, desc: "Use somente contra devotos do Bem/criaturas bondosas" }] },
 
-  "sagrada": { nome: "Sagrada", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "sagrada": { nome: "Sagrada", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+2d8 contra devotos do Mal e criaturas malignas",
     efeitos: [{ changes: [{ key: "dano", value: "2d8" }],
       opcional: true, desc: "Use somente contra devotos do Mal/criaturas malignas" }] },
 
-  "sanguinaria": { nome: "Sanguinária", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "sanguinaria": { nome: "Sanguinária", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "Criatura viva atingida fica sangrando (cumulativo)",
     efeitos: [{ condicao: "sangrando", desc: "Aplique à criatura viva atingida (cumulativo)" }] },
 
-  "trovejante": { nome: "Trovejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "trovejante": { nome: "Trovejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "Acerto crítico atordoa a vítima por 1 rodada (1×/cena; Fortitude evita)",
     efeitos: [{ condicao: "atordoado", opcional: true, desc: "Aplique em acerto crítico, 1×/cena (Fortitude CD For/Des evita)" }] },
 
-  "tumular": { nome: "Tumular", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "tumular": { nome: "Tumular", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+1d8 de trevas; 1×/rodada, 2 PM: o bônus vira +2d8, mas você perde 1d8 PV",
     efeitos: [
       { changes: [{ key: "dano", value: "1d8[trevas]" }] },
@@ -486,10 +486,10 @@ export const ENCANTOS = {
         desc: "1×/rodada: soma +1d8 de trevas extra (total 2d8), mas você perde 1d8 PV" }
     ] },
 
-  "veloz": { nome: "Veloz", tipo: "encanto", cats: ["arma"], fonte: "LB p.336",
+  "veloz": { nome: "Veloz", tipo: "encanto", cats: ["arma"], fonte: "T20 p.336",
     beneficio: "Concede Ataque Extra do guerreiro, só com esta arma (se já possui, custo −1 PM)", efeitos: [] },
 
-  "venenosa": { nome: "Venenosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "LB p.336",
+  "venenosa": { nome: "Venenosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "1×/rodada, 2 PM: se acertar, a vítima fica envenenada (1d12 PV/rodada por 3 rodadas)",
     efeitos: [{ condicao: "envenenado", custo: "2",
       desc: "Aplique se o ataque acertar (perde 1d12 PV por rodada, 3 rodadas)" }] },
@@ -606,31 +606,31 @@ export const ENCANTOS = {
     efeitos: [{ custo: "1", changes: [{ key: "dano", value: "2d6[trevas]" }],
       desc: "Recupere PV igual ao dano de trevas causado" }] },
 
-  /* ---------------- Armaduras e Escudos — LB ---------------- */
-  "abascanto": { nome: "Abascanto", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
+  /* ---------------- Armaduras e Escudos — T20 ---------------- */
+  "abascanto": { nome: "Abascanto", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "Resistência a magia +5",
     efeitos: [{ passivo: true, changes: [{ key: "system.modificadores.pericias.resistencia", value: "+5" }],
       desc: "+5 em testes de resistência contra magia (o bônus geral inclui outras fontes — ajuste se necessário)" }] },
 
-  "abencoado": { nome: "Abençoado", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
+  "abencoado": { nome: "Abençoado", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "Redução de trevas 10 e +5 em resistências contra necromancia", efeitos: [] },
 
-  "acrobatico": { nome: "Acrobático", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
+  "acrobatico": { nome: "Acrobático", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "+5 em Acrobacia e ignora a penalidade de armadura nesses testes",
     efeitos: [{ passivo: true, changes: [{ key: "system.pericias.acro.bonus", value: "5" }] }] },
 
-  "alado": { nome: "Alado", tipo: "encanto", cats: ["armadura"], fonte: "LB p.337",
+  "alado": { nome: "Alado", tipo: "encanto", cats: ["armadura"], fonte: "T20 p.337",
     beneficio: "2 PM: asas emergem — deslocamento de voo 12m (sustentado)", efeitos: [] },
 
-  "animado": { nome: "Animado", tipo: "encanto", cats: ["escudo"], fonte: "LB p.337",
+  "animado": { nome: "Animado", tipo: "encanto", cats: ["escudo"], fonte: "T20 p.337",
     beneficio: "Ação de movimento + 1 PM: o escudo flutua e defende sozinho até o fim da cena", efeitos: [] },
 
-  "assustador": { nome: "Assustador", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
+  "assustador": { nome: "Assustador", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "Ação de movimento + 2 PM: inimigos em alcance curto ficam abalados (Vontade CD Car evita)",
     efeitos: [{ condicao: "abalado", custo: "2",
       desc: "Aplique aos inimigos em alcance curto que falharem na Vontade (até o fim da cena)" }] },
 
-  "caustica": { nome: "Cáustica", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.337",
+  "caustica": { nome: "Cáustica", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "Redução de ácido 10; ação de movimento + 2 PM: seus ataques causam +1d4 de ácido até o fim da cena",
     efeitos: [
       { passivo: true, changes: [{ key: "system.tracos.resistencias.acido.bonus", value: "10" }],
@@ -641,76 +641,76 @@ export const ENCANTOS = {
         desc: "Enquanto ativa, seus ataques causam +1d4 de ácido (marque ao atacar)" }
     ] },
 
-  "defensor": { nome: "Defensor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "defensor": { nome: "Defensor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+2 na Defesa",
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "2" }] }] },
 
-  "escorregadio": { nome: "Escorregadio", tipo: "encanto", cats: ["armadura"], fonte: "LB p.337",
+  "escorregadio": { nome: "Escorregadio", tipo: "encanto", cats: ["armadura"], fonte: "T20 p.337",
     beneficio: "+10 em Acrobacia para escapar e em manobras contra agarrar", efeitos: [] },
 
-  "esmagador": { nome: "Esmagador", tipo: "encanto", cats: ["escudo"], fonte: "LB p.338",
+  "esmagador": { nome: "Esmagador", tipo: "encanto", cats: ["escudo"], fonte: "T20 p.338",
     beneficio: "+2 em ataques e dano com o escudo e o dano dele aumenta um passo",
     efeitos: [{ changes: [
       { key: "ataque", value: "2" }, { key: "dano", value: "2" },
       { key: "passos", value: "1", mode: 0 }
     ], opcional: true, desc: "Use ao atacar com o escudo" }] },
 
-  "fantasmagorico": { nome: "Fantasmagórico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "fantasmagorico": { nome: "Fantasmagórico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Lança Manto de Sombras", efeitos: [] },
 
-  "fortificado": { nome: "Fortificado", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "fortificado": { nome: "Fortificado", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Chance de ignorar dano extra de crítico/furtivo: 25% (escudos), 50% (armaduras)", efeitos: [] },
 
-  "gelido": { nome: "Gélido", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "gelido": { nome: "Gélido", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de frio 10; ação de movimento + 2 PM: 10 PV temporários até o fim da cena",
     efeitos: [{ nome: "Cobertura de gelo", custo: "2", desc: "Recebe 10 PV temporários" }] },
 
-  "guardiao": { nome: "Guardião", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "guardiao": { nome: "Guardião", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+4 na Defesa (substitui Defensor — bônus não acumulam)",
     prereqs: ["defensor"], substitui: ["defensor"],
     efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "4" }] }] },
 
-  "hipnotico": { nome: "Hipnótico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "hipnotico": { nome: "Hipnótico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Ação padrão + 3 PM: inimigos em alcance curto ficam fascinados por 1d6 rodadas (Vontade CD Car evita)",
     efeitos: [{ condicao: "fascinado", custo: "3",
       desc: "Aplique aos inimigos em alcance curto que falharem na Vontade (1d6 rodadas)" }] },
 
-  "ilusorio": { nome: "Ilusório", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "ilusorio": { nome: "Ilusório", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Ação de movimento + 1 PM: o item parece roupa comum, mantendo as propriedades", efeitos: [] },
 
-  "incandescente": { nome: "Incandescente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "incandescente": { nome: "Incandescente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de fogo 10; ação de movimento + 2 PM: 1d6 de fogo em adjacentes no início dos seus turnos",
     efeitos: [{ nome: "Labaredas", custo: "2", cena: true,
       desc: "No início de cada turno seu, criaturas adjacentes sofrem 1d6 de fogo" }] },
 
-  "invulneravel": { nome: "Invulnerável", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "invulneravel": { nome: "Invulnerável", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "RD 2 (escudos) ou RD 5 (armaduras)", efeitos: [] },
 
-  "opaco": { nome: "Opaco", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "opaco": { nome: "Opaco", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de ácido, eletricidade, fogo e frio 10", efeitos: [] },
 
-  "protetor": { nome: "Protetor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "protetor": { nome: "Protetor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+2 em testes de resistência",
     efeitos: [{ passivo: true, changes: [{ key: "system.modificadores.pericias.resistencia", value: "+2" }] }] },
 
-  "refletor": { nome: "Refletor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "refletor": { nome: "Refletor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "1×/rodada, ao ser alvo de magia, gaste PM igual ao custo dela para refleti-la", efeitos: [] },
 
-  "relampejante": { nome: "Relampejante", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "relampejante": { nome: "Relampejante", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de eletricidade 10; ação de movimento + 2 PM: quem o atacar corpo a corpo sofre 2d6 de eletricidade",
     efeitos: [{ nome: "Arcos voltaicos", custo: "2", cena: true,
       desc: "Quem o atacar corpo a corpo sofre 2d6 de eletricidade até o fim da cena" }] },
 
-  "reluzente": { nome: "Reluzente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "reluzente": { nome: "Reluzente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Ação de movimento + 2 PM: clarão cega inimigos em alcance curto por 1 rodada (Reflexos CD Car evita)",
     efeitos: [{ condicao: "cego", custo: "2",
       desc: "Aplique aos inimigos em alcance curto que falharem em Reflexos (1 rodada)" }] },
 
-  "sombrio": { nome: "Sombrio", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "sombrio": { nome: "Sombrio", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+5 em Furtividade e ignora a penalidade de armadura nesses testes",
     efeitos: [{ passivo: true, changes: [{ key: "system.pericias.furt.bonus", value: "5" }] }] },
 
-  "zeloso": { nome: "Zeloso", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "LB p.338",
+  "zeloso": { nome: "Zeloso", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "1×/rodada, quando aliado adjacente é alvo de ataque, 1 PM para se tornar o alvo", efeitos: [] },
 
   /* ---------------- Armaduras e Escudos — HA ---------------- */
@@ -919,33 +919,33 @@ export const ENCANTOS = {
 /* ================================================================== */
 
 export const MATERIAIS = {
-  "aco-rubi": { nome: "Aço-Rubi", fonte: "LB p.165",
+  "aco-rubi": { nome: "Aço-Rubi", fonte: "T20 p.165",
     precos: { arma: 6000, armaduraLeve: 3000, armaduraPesada: 6000, escudo: 3000, esoterico: 6000 },
     beneficio: "Arma: ignora 10 de RD e a imunidade a crítico de lefeu. Armadura/escudo: chance de ignorar dano extra de crítico/furtivo. Esotérico: magias ignoram 10 de RD de lefeu",
     efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "ignoraRD", value: "10" }] }] },
 
-  "adamante": { nome: "Adamante", fonte: "LB p.165",
+  "adamante": { nome: "Adamante", fonte: "T20 p.165",
     precos: { arma: 3000, armaduraLeve: 6000, armaduraPesada: 18000, escudo: 6000, esoterico: 3000 },
     beneficio: "Arma: dano +1 passo. Armadura/escudo: RD 2 (leves/escudos) ou 5 (pesadas). Esotérico: +1 PM para rerrolar 1s no dano",
     efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "passos", value: "1", mode: 0 }] }] },
 
-  "gelo-eterno": { nome: "Gelo Eterno", fonte: "LB p.165",
+  "gelo-eterno": { nome: "Gelo Eterno", fonte: "T20 p.165",
     precos: { arma: 600, armaduraLeve: 1500, armaduraPesada: 3000, escudo: 1500, esoterico: 3000 },
     beneficio: "Arma: +2 de dano por frio. Armadura/escudo: redução de fogo 5/10. Esotérico: rerrola 1s no dano de frio",
     efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "2[frio]" }] }] },
 
-  "madeira-tollon": { nome: "Madeira Tollon", fonte: "LB p.166",
+  "madeira-tollon": { nome: "Madeira Tollon", fonte: "T20 p.166",
     precos: { arma: 1500, escudo: 1500, esoterico: 1500 },
     beneficio: "Arma: conta como mágica para RD; habilidades de ataque custam −1 PM. Escudo/esotérico: resistência a magia +2",
     efeitos: [{ soCats: ["arma", "municao"], custo: "-1", desc: "Reduz em −1 PM habilidades de ataque/agredir" }] },
 
-  "materia-vermelha": { nome: "Matéria Vermelha", fonte: "LB p.166",
+  "materia-vermelha": { nome: "Matéria Vermelha", fonte: "T20 p.166",
     precos: { arma: 1500, armaduraLeve: 6000, armaduraPesada: 18000, escudo: 6000, esoterico: 3000 },
     beneficio: "Arma: +1d6 de dano, mas você perde 1 PV a cada acerto (lefou imunes). Impõe −2 em perícias de Carisma (exceto Intimidação)",
     efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "1d6" }],
       opcional: true, desc: "Você perde 1 PV a cada acerto" }] },
 
-  "mitral": { nome: "Mitral", fonte: "LB p.166",
+  "mitral": { nome: "Mitral", fonte: "T20 p.166",
     precos: { arma: 1500, armaduraLeve: 1500, armaduraPesada: 12000, escudo: 1500, esoterico: 3000 },
     beneficio: "Ocupa −1 espaço. Arma: +1 na margem de ameaça. Armadura/escudo: penalidade −2 (pesadas aplicam até 2 de Des). Esotérico: +2 PM para +2 na CD",
     efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "criticoM", value: "-1" }] }] },
@@ -1103,16 +1103,43 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
 
 let _homebrews = () => [];
 /** Registrado por homebrew.mjs para evitar dependência circular. */
-export function registrarFonteHomebrew(fn) { _homebrews = fn; }
+export function registrarFonteHomebrew(fn) { _homebrews = fn; invalidarCatalogo(); }
 
 let _overrides = () => ({});
 /** Registrado por editor.mjs: { [key]: { efeitos?, especialDesabilitado? } } */
-export function registrarFonteOverrides(fn) { _overrides = fn; }
+export function registrarFonteOverrides(fn) { _overrides = fn; invalidarCatalogo(); }
+
+/* ------------------------------------------------------------------ */
+/* Cache do catálogo unificado                                        */
+/*                                                                    */
+/* Mesclar catálogo + homebrews + overrides custa ~190 cópias de      */
+/* objeto. Antes isso rodava a CADA obterEntrada()/obterMelhorias() — */
+/* dezenas de vezes por render da aba e por adição de melhoria. Agora */
+/* o resultado (e um índice key→def) é montado uma vez e reaproveitado*/
+/* até que homebrews/overrides mudem (ver invalidarCatalogo).         */
+/* ------------------------------------------------------------------ */
+
+let _cache = null;
+let _versao = 0;
+
+/** Descarta o catálogo memoizado. Chamado quando as settings mudam. */
+export function invalidarCatalogo() {
+  _cache = null;
+  _versao++;
+}
+
+/**
+ * Contador incrementado a cada invalidação. Consumidores (a aba) usam
+ * como chave de cache para saber se o que derivaram ainda vale.
+ */
+export function versaoCatalogo() {
+  return _versao;
+}
 
 /** Aplica o override do GM (se houver) sobre a definição base de uma entrada. */
-export function aplicarOverride(key, def) {
+export function aplicarOverride(key, def, overrides = null) {
   if (!def) return def;
-  const ov = _overrides()[key];
+  const ov = (overrides ?? _overrides())[key];
   if (!ov) return def;
   const out = { ...def };
   if (Array.isArray(ov.efeitos)) out.efeitos = ov.efeitos;
@@ -1122,32 +1149,43 @@ export function aplicarOverride(key, def) {
   return out;
 }
 
-function comOverrides(tabela) {
-  const out = {};
-  for (const [k, def] of Object.entries(tabela)) out[k] = aplicarOverride(k, def);
-  return out;
+function montarCatalogo() {
+  const overrides = _overrides() ?? {};
+  const homebrews = _homebrews() ?? [];
+
+  const porTipo = { melhoria: {}, encanto: {}, material: {} };
+  for (const hb of homebrews) {
+    if (porTipo[hb.tipo]) porTipo[hb.tipo][hb.key] = hb;
+  }
+
+  const indice = new Map();
+  const mesclar = (tabela, extra) => {
+    const out = {};
+    for (const [k, def] of Object.entries(tabela)) out[k] = aplicarOverride(k, def, overrides);
+    for (const [k, def] of Object.entries(extra)) out[k] = aplicarOverride(k, def, overrides);
+    // A ordem de busca do obterEntrada original era melhoria → encanto →
+    // material; preservada aqui porque o primeiro a registrar vence.
+    for (const [k, def] of Object.entries(out)) if (!indice.has(k)) indice.set(k, def);
+    return out;
+  };
+
+  const melhorias = mesclar(MELHORIAS, porTipo.melhoria);
+  const encantos = mesclar(ENCANTOS, porTipo.encanto);
+  const materiais = mesclar(MATERIAIS, porTipo.material);
+
+  return { melhorias, encantos, materiais, indice };
 }
 
-export function obterMelhorias() {
-  const extra = {};
-  for (const hb of _homebrews()) if (hb.tipo === "melhoria") extra[hb.key] = hb;
-  return comOverrides({ ...MELHORIAS, ...extra });
+function catalogo() {
+  return (_cache ??= montarCatalogo());
 }
 
-export function obterEncantos() {
-  const extra = {};
-  for (const hb of _homebrews()) if (hb.tipo === "encanto") extra[hb.key] = hb;
-  return comOverrides({ ...ENCANTOS, ...extra });
-}
-
-export function obterMateriais() {
-  const extra = {};
-  for (const hb of _homebrews()) if (hb.tipo === "material") extra[hb.key] = hb;
-  return comOverrides({ ...MATERIAIS, ...extra });
-}
+export function obterMelhorias() { return catalogo().melhorias; }
+export function obterEncantos() { return catalogo().encantos; }
+export function obterMateriais() { return catalogo().materiais; }
 
 export function obterEntrada(key) {
-  return obterMelhorias()[key] ?? obterEncantos()[key] ?? obterMateriais()[key] ?? null;
+  return catalogo().indice.get(key) ?? null;
 }
 
 /** Definição base (sem override), para o botão "Restaurar padrão" do editor. */
@@ -1156,8 +1194,15 @@ export function obterEntradaBase(key) {
   return MELHORIAS[key] ?? ENCANTOS[key] ?? MATERIAIS[key] ?? hb ?? null;
 }
 
-/** Todas as entradas base (catálogo + homebrews), para listar no editor. */
+/**
+ * Todas as entradas base (catálogo + homebrews), para listar no editor.
+ * Memoizada junto do catálogo: a lista do editor é remontada a cada tecla
+ * digitada na busca, e recriar ~190 objetos por tecla travava o campo.
+ */
 export function obterTodasEntradas() {
+  const cache = catalogo();
+  if (cache.todas) return cache.todas;
+
   const todas = [];
   for (const [key, def] of Object.entries(MELHORIAS)) todas.push({ key, ...def, grupo: "Melhoria" });
   for (const [key, def] of Object.entries(ENCANTOS)) todas.push({ key, ...def, grupo: "Encanto" });
@@ -1166,5 +1211,6 @@ export function obterTodasEntradas() {
     const grupo = hb.tipo === "melhoria" ? "Melhoria (★)" : hb.tipo === "encanto" ? "Encanto (★)" : "Material (★)";
     todas.push({ ...hb, grupo });
   }
+  cache.todas = todas;
   return todas;
 }

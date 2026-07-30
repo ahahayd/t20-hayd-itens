@@ -1,6 +1,6 @@
 /**
  * t20-hayd-itens | alquimica.mjs
- * Automação da melhoria Injeção Alquímica (LB p.165):
+ * Automação da melhoria Injeção Alquímica (T20 p.165):
  *  - Clique direito na arma (ficha do personagem) → carregar preparados
  *    do inventário (o item sai do inventário e fica armazenado na arma).
  *  - Ao atacar, o cartão da arma no chat oferece um botão para injetar:

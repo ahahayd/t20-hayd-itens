@@ -61,25 +61,39 @@ Hooks.once("ready", () => {
   // o motor de rolagem aplicava o aumento de passo na parte errada do dano.
   if (game.user === game.users.activeGM) {
     const corrigir = async (item) => {
-      const f = item.flags?.[MODULO];
-      if (!f) return;
+      const f = item.flags[MODULO];
+      const tarefas = [];
 
       if (f.encantos?.some(e => e.key === "lancinante")
         && !Object.values(item.system?.upgrades ?? {}).includes("lancinating")) {
-        await efeitos.sincronizarLancinante(item);
+        tarefas.push(efeitos.sincronizarLancinante(item));
       }
 
       const semOrigin = [...item.effects].filter(e => e.flags?.[MODULO] && !e.origin);
       if (semOrigin.length) {
-        await item.updateEmbeddedDocuments("ActiveEffect",
-          semOrigin.map(e => ({ _id: e.id, origin: item.uuid })), { render: false });
+        tarefas.push(item.updateEmbeddedDocuments("ActiveEffect",
+          semOrigin.map(e => ({ _id: e.id, origin: item.uuid })), { render: false }));
       }
+
+      if (tarefas.length) await Promise.all(tarefas);
     };
     (async () => {
-      for (const item of game.items) await corrigir(item).catch(() => {});
-      for (const ator of game.actors) for (const item of ator.items) await corrigir(item).catch(() => {});
+      // Seleciona os candidatos primeiro: em mundos grandes, criar uma
+      // Promise por item só para descartá-lo custa mais que a migração.
+      const candidatos = [];
+      for (const item of game.items) if (item.flags?.[MODULO]) candidatos.push(item);
+      for (const ator of game.actors) {
+        for (const item of ator.items) if (item.flags?.[MODULO]) candidatos.push(item);
+      }
+      for (const item of candidatos) await corrigir(item).catch(() => {});
     })();
   }
+});
+
+/* Homebrews e overrides do GM mudaram: derruba o catálogo memoizado (em
+ * todos os clientes) para as listas voltarem a refletir as settings. */
+Hooks.on("updateSetting", (setting) => {
+  if (setting?.key?.startsWith(`${MODULO}.`)) catalogo.invalidarCatalogo();
 });
 
 /* Substitui a aba de aprimoramentos na ficha de item. */

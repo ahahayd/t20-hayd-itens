@@ -6,7 +6,7 @@
 
 import {
   MODULO, CATEGORIAS, categoriasDoItem, itemElegivel, categoriaMaterialDoItem,
-  obterMelhorias, obterEncantos, obterMateriais, obterEntrada
+  obterMelhorias, obterEncantos, obterMateriais, obterEntrada, versaoCatalogo
 } from "./catalogo.mjs";
 import {
   dadosDoItem, ehMunicao, calcularPreco, definirPrecoBase,
@@ -71,11 +71,29 @@ function agruparPorCategoria(tabela, catsPermitidas, todas) {
     .sort((a, b) => a.grupo.localeCompare(b.grupo, "pt-BR"));
 }
 
+/* Listas de opções dos <select> — iguais para todo item da mesma
+ * categoria e caras de montar (~190 entradas, agrupadas e ordenadas com
+ * localeCompare). Memoizadas por categoria e invalidadas quando o
+ * catálogo muda (homebrew/override). */
+let _cacheOpcoes = { versao: -1, mapa: new Map() };
+
+function memoOpcoes(chave, montar) {
+  const versao = versaoCatalogo();
+  if (_cacheOpcoes.versao !== versao) _cacheOpcoes = { versao, mapa: new Map() };
+  let valor = _cacheOpcoes.mapa.get(chave);
+  if (valor === undefined) {
+    valor = montar();
+    _cacheOpcoes.mapa.set(chave, valor);
+  }
+  return valor;
+}
+
 function montarLista(entradas, todasEntradas = null) {
   const todas = todasEntradas ?? entradas;
+  const porId = new Map(todas.map(x => [x.id, x]));
   return entradas.map(e => {
     const def = obterEntrada(e.key) ?? {};
-    const supressor = e.suprimidaPor ? todas.find(x => x.id === e.suprimidaPor) : null;
+    const supressor = e.suprimidaPor ? porId.get(e.suprimidaPor) : null;
     const rotuloPericia = e.pericia ? (CONFIG?.T20?.pericias?.[e.pericia]?.label ?? e.pericia) : "";
     return {
       id: e.id,
@@ -101,28 +119,34 @@ async function montarContexto(app, item) {
   const catPreco = categoriaMaterialDoItem(item);
   const mult = ehMunicao(item) ? 0.5 : 1;
 
-  const opcoesMateriais = Object.entries(obterMateriais()).map(([key, def]) => {
-    const preco = (def.precos?.[catPreco] ?? 0) * mult;
-    return {
-      key,
-      nome: def.nome,
-      beneficio: def.beneficio ?? "",
-      raro: !!def.raro,
-      homebrew: !!def.homebrew,
-      custoFmt: preco ? `T$ ${preco.toLocaleString("pt-BR")}` : "custo manual"
-    };
-  }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  const opcoesMateriais = memoOpcoes(`materiais|${catPreco}|${mult}`, () =>
+    Object.entries(obterMateriais()).map(([key, def]) => {
+      const preco = (def.precos?.[catPreco] ?? 0) * mult;
+      return {
+        key,
+        nome: def.nome,
+        beneficio: def.beneficio ?? "",
+        raro: !!def.raro,
+        homebrew: !!def.homebrew,
+        custoFmt: preco ? `T$ ${preco.toLocaleString("pt-BR")}` : "custo manual"
+      };
+    }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+
+  const chaveCats = todas ? "*" : cats.join(",");
+  const aplicadas = [...d.melhorias, ...d.encantos];
 
   return {
     editavel: app.isEditable,
     municao: ehMunicao(item),
     todasCategorias: todas,
+    // Item já sob gestão do módulo (tem preço base capturado)
+    gerenciado: d.precoBase !== null,
     preco: calcularPreco(item),
-    melhorias: montarLista(d.melhorias, [...d.melhorias, ...d.encantos]),
-    encantos: montarLista(d.encantos, [...d.melhorias, ...d.encantos]),
+    melhorias: montarLista(d.melhorias, aplicadas),
+    encantos: montarLista(d.encantos, aplicadas),
     materiais: montarLista(d.materiais),
-    opcoesMelhorias: agruparPorCategoria(obterMelhorias(), cats, todas),
-    opcoesEncantos: agruparPorCategoria(obterEncantos(), cats, todas),
+    opcoesMelhorias: memoOpcoes(`melhorias|${chaveCats}`, () => agruparPorCategoria(obterMelhorias(), cats, todas)),
+    opcoesEncantos: memoOpcoes(`encantos|${chaveCats}`, () => agruparPorCategoria(obterEncantos(), cats, todas)),
     opcoesMateriais,
     temInjecao: d.melhorias.some(m => m.key === "injecao-alquimica"),
     alquimicos: d.alquimicos.map(a => ({ name: a.name, img: a.img })),
@@ -149,15 +173,18 @@ export async function aoRenderizarFichaItem(app, html) {
   $html.find("nav.sheet-tabs").first().append($nav);
 
   // Conteúdo
-  const contexto = await montarContexto(app, item);
-  const conteudo = await foundry.applications.handlebars.renderTemplate(
-    `modules/${MODULO}/templates/aba.hbs`, contexto
-  );
-  const $aba = $(`<div class="tab ${ABA_ID}" data-group="primary" data-tab="${ABA_ID}"></div>`).html(conteudo);
+  const $aba = $(`<div class="tab ${ABA_ID}" data-group="primary" data-tab="${ABA_ID}"></div>`);
 
   const $corpo = $html.find(".sheet-body").first();
   if ($corpo.length) $corpo.append($aba);
   else $html.find(".tab").last().after($aba);
+
+  /* Toda mudança feita pela aba redesenha SÓ a aba, em vez de chamar
+   * app.render(): o render completo da ficha reconstrói todas as abas do
+   * sistema e recria os editores de texto ricos da Descrição — o que
+   * custava centenas de milissegundos a cada melhoria adicionada. */
+  app._haydAtualizar = () => desenharAba(app, item, $aba, $html);
+  await desenharAba(app, item, $aba, $html);
 
   /* A aba é injetada DEPOIS do bind das tabs do Foundry: no re-render,
    * o controlador não encontra "hayd-itens" e volta para a aba inicial.
@@ -184,54 +211,86 @@ export async function aoRenderizarFichaItem(app, html) {
   /* Campos do módulo não fazem parte do formulário da ficha: impede o
    * submit automático (submitOnChange) de disparar um segundo render. */
   $aba.on("change", ev => ev.stopPropagation());
+}
 
-  /* Preserva a rolagem da aba entre re-renders. */
+/**
+ * Redesenha o conteúdo da aba no lugar, preservando a rolagem, e mantém
+ * o campo de preço da ficha do sistema em dia (ele vive fora da aba e,
+ * sem o render completo, não se atualizaria sozinho).
+ */
+async function desenharAba(app, item, $aba, $html) {
+  const contexto = await montarContexto(app, item);
+  const conteudo = await foundry.applications.handlebars.renderTemplate(
+    `modules/${MODULO}/templates/aba.hbs`, contexto
+  );
+
+  const anterior = $aba.find(".hayd-itens-aba").scrollTop();
+  if (anterior) app._haydScroll = anterior;
+
+  $aba.html(conteudo);
+
   const $rolagem = $aba.find(".hayd-itens-aba");
   $rolagem.on("scroll", () => { app._haydScroll = $rolagem.scrollTop(); });
   if (app._haydScroll) requestAnimationFrame(() => $rolagem.scrollTop(app._haydScroll));
 
+  // Campo de preço da ficha nativa: fica fora da aba e, sem o render
+  // completo, não se atualizaria sozinho. Só é tocado em itens que o
+  // módulo já gerencia, para não mexer no preço de itens comuns.
+  if (contexto.gerenciado) $html.find('[name="system.preco"]').val(contexto.preco.total);
+
   ativarListeners(app, item, $aba);
+}
+
+/**
+ * Encapsula uma ação da aba: ignora cliques repetidos enquanto a
+ * anterior não terminou (evitava filas de renders sobrepostos) e
+ * redesenha a aba ao final.
+ */
+function acao(app, fn) {
+  return async (...args) => {
+    if (app._haydOcupado) return;
+    app._haydOcupado = true;
+    try {
+      await fn(...args);
+      await app._haydAtualizar?.();
+    } catch (err) {
+      console.error(`${MODULO} | Falha na ação da aba`, err);
+    } finally {
+      app._haydOcupado = false;
+    }
+  };
 }
 
 function ativarListeners(app, item, $aba) {
   // Alternar filtro de categorias
-  $aba.find(".hayd-todas-categorias").on("change", ev => {
+  $aba.find(".hayd-todas-categorias").on("change", acao(app, ev => {
     app._haydTodasCategorias = ev.currentTarget.checked;
-    app.render();
-  });
+  }));
 
   if (!app.isEditable) return;
 
   // Preço base
-  $aba.find(".hayd-preco-base").on("change", async ev => {
-    await definirPrecoBase(item, ev.currentTarget.value);
-    app.render();
-  });
+  $aba.find(".hayd-preco-base").on("change", acao(app, ev =>
+    definirPrecoBase(item, ev.currentTarget.value)));
 
   // Adicionar melhoria/encanto
-  $aba.find(".hayd-add-melhoria").on("click", async () => {
+  $aba.find(".hayd-add-melhoria").on("click", acao(app, () => {
     const key = $aba.find(".hayd-select-melhoria").val();
-    if (!key) return;
-    await adicionarComEscolha(item, key);
-    app.render();
-  });
-  $aba.find(".hayd-add-encanto").on("click", async () => {
+    if (key) return adicionarComEscolha(item, key);
+  }));
+  $aba.find(".hayd-add-encanto").on("click", acao(app, () => {
     const key = $aba.find(".hayd-select-encanto").val();
-    if (!key) return;
-    await adicionarComEscolha(item, key);
-    app.render();
-  });
+    if (key) return adicionarComEscolha(item, key);
+  }));
 
   // Adicionar material
-  $aba.find(".hayd-add-material").on("click", async () => {
+  $aba.find(".hayd-add-material").on("click", acao(app, () => {
     const key = $aba.find(".hayd-select-material").val();
-    if (!key) return;
-    await adicionarMaterial(item, key);
-    app.render();
-  });
+    if (key) return adicionarMaterial(item, key);
+  }));
 
   // Remover
-  $aba.find(".hayd-remover").on("click", async ev => {
+  $aba.find(".hayd-remover").on("click", acao(app, async ev => {
     const { lista, id } = ev.currentTarget.dataset;
     const nome = obterEntrada((item.getFlag(MODULO, lista) ?? []).find(e => e.id === id)?.key)?.nome ?? "entrada";
     const ok = await foundry.applications.api.DialogV2.confirm({
@@ -240,21 +299,17 @@ function ativarListeners(app, item, $aba) {
     });
     if (!ok) return;
     await removerEntrada(item, lista, id);
-    app.render();
-  });
+  }));
 
   // Custo manual de material
-  $aba.find(".hayd-custo-material").on("change", async ev => {
-    await atualizarCustoMaterial(item, ev.currentTarget.dataset.id, ev.currentTarget.value);
-    app.render();
-  });
+  $aba.find(".hayd-custo-material").on("change", acao(app, ev =>
+    atualizarCustoMaterial(item, ev.currentTarget.dataset.id, ev.currentTarget.value)));
 
   // Homebrew
-  $aba.find(".hayd-abrir-homebrew").on("click", () => abrirGerenciadorHomebrew(() => app.render()));
+  $aba.find(".hayd-abrir-homebrew").on("click", () =>
+    abrirGerenciadorHomebrew(() => app._haydAtualizar?.()));
 
   // Descarregar alquímico
-  $aba.find(".hayd-descarregar").on("click", async ev => {
-    await descarregarAlquimico(item, Number(ev.currentTarget.dataset.indice));
-    app.render();
-  });
+  $aba.find(".hayd-descarregar").on("click", acao(app, ev =>
+    descarregarAlquimico(item, Number(ev.currentTarget.dataset.indice))));
 }
