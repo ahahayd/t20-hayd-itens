@@ -1,21 +1,6 @@
 # T20 Hayd — Itens Superiores e Mágicos
 
-Automação de **melhorias, encantos e materiais especiais** de itens do **Tormenta20** (Livro Básico, Ameaças, Heróis e Deuses de Arton) no **FoundryVTT v13**. Substitui a aba de aprimoramentos nativa do sistema por uma versão sem limite de slots e com preço automático.
-
-## O que faz
-
-- Adiciona a aba **"Melhorias & Encantos"** às fichas de item (armas, armaduras, itens, etc.).
-- **Sem limite de slots**: aplique quantas melhorias e encantos quiser no mesmo item.
-- **Ajuste automático de preço** do item conforme as melhorias/encantos/materiais aplicados.
-- **Materiais especiais** destacados visualmente.
-- Automação da **Injeção Alquímica**.
-- Suporte a **homebrews** (melhorias e encantos personalizados).
-
-## Como usar
-
-1. Ative o módulo no mundo.
-2. Abra a ficha de um item físico (arma, armadura, equipamento…).
-3. Vá até a aba **Melhorias & Encantos** e adicione os aprimoramentos desejados — o preço do item é recalculado automaticamente.
+Automação completa de **melhorias, encantos e materiais especiais** de itens do **Tormenta20** (Livro Básico, Ameaças de Arton, Heróis de Arton e Deuses de Arton) no FoundryVTT. Substitui a aba de aprimoramentos nativa por uma versão sem limite de slots e com preço automático.
 
 ## Requisitos
 
@@ -27,9 +12,31 @@ Automação de **melhorias, encantos e materiais especiais** de itens do **Torme
 Em *Configurar → Módulos Complementares → Instalar Módulo*, cole a URL do manifesto:
 
 ```
-https://raw.githubusercontent.com/Haydgi/t20-hayd-itens/main/module.json
+https://github.com/ahahayd/t20-hayd-itens/releases/latest/download/module.json
 ```
+
+## Como usar
+
+### Aplicar melhorias e encantos
+
+Abra a ficha de um item físico (arma, armadura, equipamento…) e vá até a aba **Melhorias & Encantos**. Adicione quantos aprimoramentos quiser — não há limite de slots — e o preço do item é recalculado automaticamente a cada mudança.
+
+### Materiais especiais
+
+Os materiais especiais aparecem destacados visualmente na aba, com seus efeitos e ajuste de preço aplicados junto com o restante.
+
+### Injeção Alquímica
+
+A melhoria de Injeção Alquímica é automatizada: o item registra o preparado alquímico e o aplica ao uso, seguindo a regra oficial.
+
+### Homebrews
+
+O Mestre pode criar melhorias e encantos personalizados pelo editor de efeitos incluído, que ficam disponíveis na aba como qualquer aprimoramento oficial.
+
+## Detalhes adicionais
+
+- A aba nativa de aprimoramentos do sistema é substituída apenas visualmente — os dados do item continuam no formato padrão do Tormenta20.
 
 ## Aviso
 
-Módulo não oficial, sem afiliação com a Jambô Editora ou com os autores de Tormenta20.
+Módulo não oficial, criado por fã, sem afiliação com a Jambô Editora ou com os autores de Tormenta20.
