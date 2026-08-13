@@ -259,8 +259,9 @@ export const MELHORIAS = {
       desc: "Gasta 1 bala carregada no escudo" }] },
 
   "injetora": { nome: "Injetora", tipo: "melhoria", cats: ["armadura"], fonte: "HA p.240",
-    beneficio: "Ação de movimento para acionar e ingerir 1 dose de preparado ou poção (1 dose; carregar é ação completa)",
-    nota: "Use a poção/preparado do inventário normalmente", efeitos: [] },
+    beneficio: "Ação de movimento para acionar e ingerir 1 dose de preparado ou poção (1 dose; clique direito na armadura para carregar — ação completa)",
+    nota: "Com a automação desligada, use a poção/preparado do inventário normalmente",
+    especial: "injetora", efeitos: [] },
 
   "prudente": { nome: "Prudente", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "HA p.240",
     beneficio: "1×/dia, role duas vezes na tabela de falhas críticas e escolha o resultado (regra opcional)",

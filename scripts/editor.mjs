@@ -184,7 +184,7 @@ class EditorManagerApp extends HandlebarsApplicationMixin(ApplicationV2) {
       grupo: e.grupo,
       fonte: e.fonte ?? "homebrew",
       beneficio: e.beneficio ?? "",
-      especial: e.especial === "alquimica",
+      especial: ["alquimica", "injetora"].includes(e.especial),
       modificado: !!overrides[e.key]
     }));
     if (this._grupo) entradas = entradas.filter(e => e.grupo === this._grupo);
@@ -249,8 +249,11 @@ class EditorEntradaApp extends HandlebarsApplicationMixin(ApplicationV2) {
     // Só automações exclusivas de fato são desabilitáveis pelo GM. Hoje,
     // apenas a Injeção Alquímica (carregar/injetar preparados). As marcações
     // "ameacadora"/"lancinante" são internas (como o efeito é montado).
-    const NOMES_ESPECIAL = { alquimica: "Injeção Alquímica — carregar/injetar preparados" };
-    this._temEspecial = this._base.especial === "alquimica";
+    const NOMES_ESPECIAL = {
+      alquimica: "Injeção Alquímica — carregar/injetar preparados",
+      injetora: "Injetora — carregar/ingerir preparados e poções"
+    };
+    this._temEspecial = ["alquimica", "injetora"].includes(this._base.especial);
     this._especialNome = NOMES_ESPECIAL[this._base.especial] ?? this._base.especial ?? "";
     this._especialDesabilitado = !!obterOverrides()[key]?.especialDesabilitado;
     this._efeitos = (def.efeitos ?? []).map(efeitoParaUI);

@@ -9,6 +9,7 @@
  *   encantos:  [{ id, key }]
  *   materiais: [{ id, key, custo }]
  *   alquimicos: [itemData…]    — doses da Injeção Alquímica
+ *   injetora:   [itemData…]    — dose da Injetora (armadura)
  */
 
 import {
@@ -27,7 +28,8 @@ export function dadosDoItem(item) {
     melhorias: f.melhorias ?? [],
     encantos: f.encantos ?? [],
     materiais: f.materiais ?? [],
-    alquimicos: f.alquimicos ?? []
+    alquimicos: f.alquimicos ?? [],
+    injetora: f.injetora ?? []
   };
 }
 

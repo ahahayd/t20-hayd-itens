@@ -13,7 +13,7 @@ import {
   adicionarEntrada, adicionarMaterial, removerEntrada, atualizarCustoMaterial
 } from "./efeitos.mjs";
 import { abrirGerenciadorHomebrew } from "./homebrew.mjs";
-import { descarregarAlquimico } from "./alquimica.mjs";
+import { descarregarAlquimico, descarregarInjetora } from "./alquimica.mjs";
 
 const ABA_ID = "hayd-itens";
 
@@ -150,6 +150,8 @@ async function montarContexto(app, item) {
     opcoesMateriais,
     temInjecao: d.melhorias.some(m => m.key === "injecao-alquimica"),
     alquimicos: d.alquimicos.map(a => ({ name: a.name, img: a.img })),
+    temInjetora: d.melhorias.some(m => m.key === "injetora"),
+    dosesInjetora: d.injetora.map(a => ({ name: a.name, img: a.img })),
     temAtor: !!item.actor
   };
 }
@@ -309,7 +311,9 @@ function ativarListeners(app, item, $aba) {
   $aba.find(".hayd-abrir-homebrew").on("click", () =>
     abrirGerenciadorHomebrew(() => app._haydAtualizar?.()));
 
-  // Descarregar alquímico
+  // Descarregar alquímico / injetora
   $aba.find(".hayd-descarregar").on("click", acao(app, ev =>
     descarregarAlquimico(item, Number(ev.currentTarget.dataset.indice))));
+  $aba.find(".hayd-descarregar-injetora").on("click", acao(app, ev =>
+    descarregarInjetora(item, Number(ev.currentTarget.dataset.indice))));
 }

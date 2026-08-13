@@ -1,55 +1,91 @@
 /**
  * t20-hayd-itens | alquimica.mjs
- * Automação da melhoria Injeção Alquímica (T20 p.165):
- *  - Clique direito na arma (ficha do personagem) → carregar preparados
- *    do inventário (o item sai do inventário e fica armazenado na arma).
- *  - Ao atacar, o cartão da arma no chat oferece um botão para injetar:
- *    o preparado é usado com a caixa de diálogo de rolagem do sistema
- *    (permitindo escolher poderes/aprimoramentos) e a dose é consumida.
+ * Automação das melhorias com doses carregáveis:
+ *
+ *  - Injeção Alquímica (T20 p.165, arma, 2 doses): clique direito na arma
+ *    para carregar preparados; ao atacar, o cartão da arma no chat oferece
+ *    o botão de injetar.
+ *  - Injetora (HA p.240, armadura, 1 dose): clique direito na armadura para
+ *    carregar um preparado ou poção; ingerir (ação de movimento) também
+ *    pelo menu de contexto.
+ *
+ * Em ambas, o uso passa pela caixa de diálogo de rolagem do sistema
+ * (permitindo escolher poderes/aprimoramentos) e a dose é consumida.
  */
 
 import { MODULO, obterEntrada } from "./catalogo.mjs";
-import { dadosDoItem } from "./efeitos.mjs";
 
-const MAX_DOSES = 2;
 const { DialogV2 } = foundry.applications.api;
+
+/* ------------------------------------------------------------------ */
+/* Configuração das melhorias com doses                               */
+/* ------------------------------------------------------------------ */
+
+const CONFIGS = {
+  "injecao-alquimica": {
+    flag: "alquimicos",
+    max: 2,
+    rotulo: "Injeção Alquímica",
+    especial: "alquimica",
+    verboUso: "Injetar",
+    sufixoUso: "injeção",
+    tipoItem: "arma",
+    dicaCarregar: "carregar exige ação completa"
+  },
+  "injetora": {
+    flag: "injetora",
+    max: 1,
+    rotulo: "Injetora",
+    especial: "injetora",
+    verboUso: "Ingerir",
+    sufixoUso: "injetora",
+    tipoItem: "equipamento",
+    dicaCarregar: "carregar exige ação completa; ingerir é ação de movimento"
+  }
+};
+
+function automacaoAtiva(chave) {
+  return obterEntrada(chave)?.especial === CONFIGS[chave].especial;
+}
 
 /** true se a automação da Injeção Alquímica não foi desabilitada pelo GM. */
 export function automacaoAlquimicaAtiva() {
-  return obterEntrada("injecao-alquimica")?.especial === "alquimica";
+  return automacaoAtiva("injecao-alquimica");
 }
 
-function temInjecao(item) {
-  if (!automacaoAlquimicaAtiva()) return false;
-  return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === "injecao-alquimica");
+function temMelhoria(item, chave) {
+  if (!automacaoAtiva(chave)) return false;
+  if (item.type !== CONFIGS[chave].tipoItem) return false;
+  return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === chave);
 }
 
 /* ------------------------------------------------------------------ */
-/* Carregar / descarregar                                             */
+/* Carregar / descarregar / usar (núcleo compartilhado)               */
 /* ------------------------------------------------------------------ */
 
-export async function carregarAlquimico(arma) {
-  const ator = arma.actor;
+async function carregarDose(item, chave) {
+  const cfg = CONFIGS[chave];
+  const ator = item.actor;
   if (!ator) return;
 
-  const doses = arma.getFlag(MODULO, "alquimicos") ?? [];
-  if (doses.length >= MAX_DOSES) {
-    return ui.notifications.warn(`Injeção Alquímica: capacidade máxima de ${MAX_DOSES} doses.`);
+  const doses = item.getFlag(MODULO, cfg.flag) ?? [];
+  if (doses.length >= cfg.max) {
+    return ui.notifications.warn(`${cfg.rotulo}: capacidade máxima de ${cfg.max} dose${cfg.max > 1 ? "s" : ""}.`);
   }
 
   const candidatos = ator.items.filter(i =>
-    i.type === "consumivel" && ["alchemy", "potion"].includes(i.system?.tipo) && i.id !== arma.id
+    i.type === "consumivel" && ["alchemy", "potion"].includes(i.system?.tipo) && i.id !== item.id
   );
   if (!candidatos.length) {
-    return ui.notifications.warn("Nenhum preparado alquímico (consumível) encontrado no inventário.");
+    return ui.notifications.warn("Nenhum preparado alquímico ou poção (consumível) encontrado no inventário.");
   }
 
   const opcoes = candidatos
     .map(i => `<option value="${i.id}">${i.name} (${i.system?.qtd ?? 1}x)</option>`)
     .join("");
   const dados = await DialogV2.prompt({
-    window: { title: `Carregar Injeção Alquímica — ${arma.name}` },
-    content: `<p>Escolha o preparado a carregar (${doses.length}/${MAX_DOSES} doses; carregar exige ação completa):</p>
+    window: { title: `Carregar ${cfg.rotulo} — ${item.name}` },
+    content: `<p>Escolha a dose a carregar (${doses.length}/${cfg.max}; ${cfg.dicaCarregar}):</p>
       <div class="form-group"><select name="itemId">${opcoes}</select></div>`,
     ok: { label: "Carregar", callback: (ev, btn) => new foundry.applications.ux.FormDataExtended(btn.form).object }
   }).catch(() => null);
@@ -67,18 +103,19 @@ export async function carregarAlquimico(arma) {
   if (qtd > 1) await fonte.update({ "system.qtd": qtd - 1 });
   else await fonte.delete();
 
-  await arma.setFlag(MODULO, "alquimicos", [...doses, carga]);
-  ui.notifications.info(`${carga.name} carregado em ${arma.name} (${doses.length + 1}/${MAX_DOSES}).`);
+  await item.setFlag(MODULO, cfg.flag, [...doses, carga]);
+  ui.notifications.info(`${carga.name} carregado em ${item.name} (${doses.length + 1}/${cfg.max}).`);
 }
 
-export async function descarregarAlquimico(arma, indice) {
-  const ator = arma.actor;
-  const doses = foundry.utils.deepClone(arma.getFlag(MODULO, "alquimicos") ?? []);
+async function descarregarDose(item, chave, indice) {
+  const cfg = CONFIGS[chave];
+  const ator = item.actor;
+  const doses = foundry.utils.deepClone(item.getFlag(MODULO, cfg.flag) ?? []);
   const dose = doses[indice];
   if (!dose) return;
 
   doses.splice(indice, 1);
-  await arma.setFlag(MODULO, "alquimicos", doses);
+  await item.setFlag(MODULO, cfg.flag, doses);
 
   if (ator) {
     const existente = ator.items.find(i => i.name === dose.name && i.type === "consumivel");
@@ -88,32 +125,104 @@ export async function descarregarAlquimico(arma, indice) {
   }
 }
 
+let _usandoDose = false;
+
+async function usarDose(item, chave, indice) {
+  if (_usandoDose) return;
+  const cfg = CONFIGS[chave];
+  const ator = item.actor;
+  if (!ator) return;
+
+  const doses = foundry.utils.deepClone(item.getFlag(MODULO, cfg.flag) ?? []);
+  const dose = doses[indice];
+  if (!dose) return ui.notifications.warn("Esta dose já foi usada.");
+
+  _usandoDose = true;
+  let temp = null;
+  try {
+    // Cria o item temporário no ator e usa o fluxo normal do sistema,
+    // com a caixa de diálogo de uso (bônus, poderes, aprimoramentos).
+    const dadosTemp = foundry.utils.deepClone(dose);
+    dadosTemp.name = `${dose.name} (${cfg.sufixoUso})`;
+    foundry.utils.setProperty(dadosTemp, `flags.${MODULO}.doseTemporaria`, true);
+    [temp] = await ator.createEmbeddedDocuments("Item", [dadosTemp]);
+
+    const resultado = await temp.roll();
+
+    if (resultado !== undefined && resultado !== null) {
+      // Uso confirmado: consome a dose
+      doses.splice(indice, 1);
+      await item.setFlag(MODULO, cfg.flag, doses);
+    }
+  } catch (err) {
+    console.error(`${MODULO} | Falha ao usar dose (${cfg.rotulo})`, err);
+  } finally {
+    if (temp) {
+      const aindaExiste = ator.items.get(temp.id);
+      if (aindaExiste) await aindaExiste.delete();
+    }
+    _usandoDose = false;
+  }
+}
+
+/* API pública mantida (Injeção Alquímica) + Injetora */
+export const carregarAlquimico = arma => carregarDose(arma, "injecao-alquimica");
+export const descarregarAlquimico = (arma, indice) => descarregarDose(arma, "injecao-alquimica", indice);
+export const carregarInjetora = item => carregarDose(item, "injetora");
+export const descarregarInjetora = (item, indice) => descarregarDose(item, "injetora", indice);
+
 /* ------------------------------------------------------------------ */
 /* Menu de contexto do item na ficha                                  */
 /* ------------------------------------------------------------------ */
 
 export function opcoesMenuContexto(item, menuItems) {
-  if (item.type !== "arma" || !item.actor) return;
-  if (!temInjecao(item)) return;
+  if (!item.actor) return;
 
-  menuItems.push({
-    name: "Injeção Alquímica: carregar",
-    icon: '<i class="fa-solid fa-syringe"></i>',
-    callback: () => carregarAlquimico(item)
-  });
-
-  const doses = item.getFlag(MODULO, "alquimicos") ?? [];
-  if (doses.length) {
+  // Injeção Alquímica — arma (uso pelo cartão de ataque no chat)
+  if (temMelhoria(item, "injecao-alquimica")) {
     menuItems.push({
-      name: `Injeção Alquímica: descarregar (${doses.length})`,
-      icon: '<i class="fa-solid fa-rotate-left"></i>',
-      callback: () => descarregarAlquimico(item, 0)
+      name: "Injeção Alquímica: carregar",
+      icon: '<i class="fa-solid fa-syringe"></i>',
+      callback: () => carregarDose(item, "injecao-alquimica")
     });
+
+    const doses = item.getFlag(MODULO, "alquimicos") ?? [];
+    if (doses.length) {
+      menuItems.push({
+        name: `Injeção Alquímica: descarregar (${doses.length})`,
+        icon: '<i class="fa-solid fa-rotate-left"></i>',
+        callback: () => descarregarDose(item, "injecao-alquimica", 0)
+      });
+    }
+  }
+
+  // Injetora — armadura (ingerir direto pelo menu, ação de movimento)
+  if (temMelhoria(item, "injetora")) {
+    const doses = item.getFlag(MODULO, "injetora") ?? [];
+    if (doses.length < CONFIGS.injetora.max) {
+      menuItems.push({
+        name: "Injetora: carregar",
+        icon: '<i class="fa-solid fa-syringe"></i>',
+        callback: () => carregarDose(item, "injetora")
+      });
+    }
+    if (doses.length) {
+      menuItems.push({
+        name: `Injetora: ingerir ${doses[0].name}`,
+        icon: '<i class="fa-solid fa-flask"></i>',
+        callback: () => usarDose(item, "injetora", 0)
+      });
+      menuItems.push({
+        name: "Injetora: descarregar",
+        icon: '<i class="fa-solid fa-rotate-left"></i>',
+        callback: () => descarregarDose(item, "injetora", 0)
+      });
+    }
   }
 }
 
 /* ------------------------------------------------------------------ */
-/* Botão no cartão de chat da arma                                    */
+/* Botão no cartão de chat da arma (Injeção Alquímica)                */
 /* ------------------------------------------------------------------ */
 
 export function aoRenderizarMensagem(mensagem, html) {
@@ -127,7 +236,7 @@ export function aoRenderizarMensagem(mensagem, html) {
   const ator = game.actors.get(actorId);
   const arma = ator?.items?.get(itemId);
   if (!ator || !arma || arma.type !== "arma") return;
-  if (!temInjecao(arma)) return;
+  if (!temMelhoria(arma, "injecao-alquimica")) return;
   if (!ator.isOwner) return;
 
   const doses = arma.getFlag(MODULO, "alquimicos") ?? [];
@@ -144,48 +253,9 @@ export function aoRenderizarMensagem(mensagem, html) {
     btn.innerHTML = `<i class="fa-solid fa-syringe"></i> Injetar ${dose.name}`;
     btn.addEventListener("click", ev => {
       ev.preventDefault();
-      injetar(arma, Number(ev.currentTarget.dataset.indice));
+      usarDose(arma, "injecao-alquimica", Number(ev.currentTarget.dataset.indice));
     });
     rodape.appendChild(btn);
   }
   card.appendChild(rodape);
-}
-
-let _injetando = false;
-
-async function injetar(arma, indice) {
-  if (_injetando) return;
-  const ator = arma.actor;
-  if (!ator) return;
-
-  const doses = foundry.utils.deepClone(arma.getFlag(MODULO, "alquimicos") ?? []);
-  const dose = doses[indice];
-  if (!dose) return ui.notifications.warn("Esta dose já foi usada.");
-
-  _injetando = true;
-  let temp = null;
-  try {
-    // Cria o item temporário no ator e usa o fluxo normal do sistema,
-    // com a caixa de diálogo de uso (bônus, poderes, aprimoramentos).
-    const dadosTemp = foundry.utils.deepClone(dose);
-    dadosTemp.name = `${dose.name} (injeção)`;
-    foundry.utils.setProperty(dadosTemp, `flags.${MODULO}.doseTemporaria`, true);
-    [temp] = await ator.createEmbeddedDocuments("Item", [dadosTemp]);
-
-    const resultado = await temp.roll();
-
-    if (resultado !== undefined && resultado !== null) {
-      // Uso confirmado: consome a dose da arma
-      doses.splice(indice, 1);
-      await arma.setFlag(MODULO, "alquimicos", doses);
-    }
-  } catch (err) {
-    console.error(`${MODULO} | Falha ao injetar preparado`, err);
-  } finally {
-    if (temp) {
-      const aindaExiste = ator.items.get(temp.id);
-      if (aindaExiste) await aindaExiste.delete();
-    }
-    _injetando = false;
-  }
 }

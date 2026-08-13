@@ -166,4 +166,31 @@
     {{/if}}
   </section>
   {{/if}}
+
+  {{!-- ── Injetora ── --}}
+  {{#if temInjetora}}
+  <section class="hayd-secao hayd-alquimica">
+    <h3><i class="fa-solid fa-syringe"></i> Injetora</h3>
+    {{#if dosesInjetora.length}}
+    <ul class="hayd-lista">
+      {{#each dosesInjetora}}
+      <li>
+        <img src="{{this.img}}" width="24" height="24">
+        <div class="hayd-info"><strong>{{this.name}}</strong></div>
+        {{#if ../temAtor}}
+        <a class="hayd-descarregar-injetora" data-indice="{{@index}}" data-tooltip="Devolver ao inventário"><i class="fa-solid fa-rotate-left"></i></a>
+        {{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <p class="hayd-vazio">Nenhuma dose carregada (capacidade: 1 dose).</p>
+    {{/if}}
+    {{#if temAtor}}
+    <p class="hayd-nota">Carregue e ingira a dose pelo clique direito na armadura, na ficha do personagem (carregar: ação completa; ingerir: ação de movimento).</p>
+    {{else}}
+    <p class="hayd-nota">Coloque a armadura na ficha de um personagem para carregar a dose.</p>
+    {{/if}}
+  </section>
+  {{/if}}
 </div>
