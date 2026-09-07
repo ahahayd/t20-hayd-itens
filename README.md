@@ -1,6 +1,6 @@
-# T20 Hayd — Itens Superiores e Mágicos
+[![Apoie no Ko-fi](https://img.shields.io/badge/Apoie_no_Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/haydgi)
 
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+# T20 Hayd — Itens Superiores e Mágicos
 
 Automação completa de **melhorias, encantos e materiais especiais** de itens do **Tormenta20** (Livro Básico, Ameaças de Arton, Heróis de Arton e Deuses de Arton) no FoundryVTT. Substitui a aba de aprimoramentos nativa por uma versão sem limite de slots e com preço automático.
 
@@ -49,7 +49,7 @@ Este módulo é totalmente gratuito. Se você gosta de usá-lo e quiser apoiar s
 
 Você pode apoiar meu trabalho pelo Ko-fi:
 
-[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+[![Apoie no Ko-fi](https://img.shields.io/badge/Apoie_no_Ko--fi-FF5E5B?style=for-the-badge&logo=kofi&logoColor=white)](https://ko-fi.com/haydgi)
 
 Ao apoiar pelo Ko-fi, você também pode deixar uma mensagem com um pedido ou sugestão de automação para Foundry VTT que gostaria de ver. Esses pedidos podem servir de inspiração para futuras funcionalidades, automações ou módulos.
 
