@@ -1,5 +1,7 @@
 # T20 Hayd — Itens Superiores e Mágicos
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
 Automação completa de **melhorias, encantos e materiais especiais** de itens do **Tormenta20** (Livro Básico, Ameaças de Arton, Heróis de Arton e Deuses de Arton) no FoundryVTT. Substitui a aba de aprimoramentos nativa por uma versão sem limite de slots e com preço automático.
 
 ## Requisitos
@@ -36,6 +38,42 @@ O Mestre pode criar melhorias e encantos personalizados pelo editor de efeitos i
 ## Detalhes adicionais
 
 - A aba nativa de aprimoramentos do sistema é substituída apenas visualmente — os dados do item continuam no formato padrão do Tormenta20.
+
+---
+
+## ❤️ Apoio e Comissões
+
+Este módulo é totalmente gratuito. Se você gosta de usá-lo e quiser apoiar seu desenvolvimento, qualquer contribuição é muito bem-vinda!
+
+### ☕ Ko-fi
+
+Você pode apoiar meu trabalho pelo Ko-fi:
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
+Ao apoiar pelo Ko-fi, você também pode deixar uma mensagem com um pedido ou sugestão de automação para Foundry VTT que gostaria de ver. Esses pedidos podem servir de inspiração para futuras funcionalidades, automações ou módulos.
+
+### 🇧🇷 Pix
+
+Se preferir, você também pode apoiar diretamente via Pix.
+
+**Chave Pix aleatória:**
+
+`a8baae96-f4d1-48a5-af25-45bf419fb0fb`
+
+<p align="center">
+  <img src="assets/qrcode.png" alt="QR Code Pix" width="220">
+</p>
+
+### 🛠️ Comissões para Foundry VTT
+
+Também aceito comissões para desenvolvimento no Foundry VTT, incluindo a implementação de **módulos completos de aventuras**, respeitando os direitos e licenças dos materiais utilizados, com cenas, atores, itens, diários, automações e outros conteúdos necessários para deixar a aventura pronta para uso no Foundry, além de módulos específicos para Tormenta20 e outros sistemas.
+
+Se tiver interesse em contratar uma comissão, você pode entrar em contato comigo pelo Discord `xddyahaha` para conversarmos sobre o projeto e seu escopo.
+
+<p align="center">
+  <sub>Todo apoio é opcional e ajuda a continuar desenvolvendo e mantendo meus módulos para Foundry VTT. ❤️</sub>
+</p>
 
 ## Aviso
 
