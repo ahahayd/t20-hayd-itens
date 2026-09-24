@@ -1,4 +1,182 @@
 {{!-- t20-hayd-itens | aba.hbs — aba "Melhorias & Encantos" --}}
+
+{{!-- ── Seletor de poder/magia de uma entrada ── --}}
+{{#*inline "hayd-escolha"}}
+<div class="hayd-painel hayd-escolha{{#if escolha.quebrado}} hayd-quebrada{{/if}}">
+  <span class="hayd-painel-rotulo"><i class="fa-solid fa-hand-pointer"></i> {{escolha.rotulo}}</span>
+  {{#if escolha.semAtor}}
+    {{#if escolha.selecionados.length}}
+    <span class="hayd-chips">{{#each escolha.selecionados}}<span class="hayd-chip">{{nome}}</span>{{/each}}</span>
+    {{else}}
+    <span class="hayd-nota">Coloque o item na ficha de um personagem para escolher.</span>
+    {{/if}}
+  {{else if escolha.multipla}}
+    <span class="hayd-chips">
+      {{#each escolha.selecionados}}
+      <span class="hayd-chip{{#if ausente}} hayd-chip-quebrado{{/if}}">{{#if ausente}}<i class="fa-solid fa-link-slash"></i> {{/if}}{{nome}}{{#if @root.editavel}}<a data-acao="escolha-remover" data-nome="{{nome}}" data-tooltip="Remover"><i class="fa-solid fa-xmark"></i></a>{{/if}}</span>
+      {{/each}}
+      {{#if @root.editavel}}
+      <select class="hayd-escolha-add">
+        <option value="">Adicionar…</option>
+        {{#each escolha.opcoes}}<option value="{{nome}}">{{nome}}</option>{{/each}}
+      </select>
+      {{/if}}
+    </span>
+  {{else}}
+    <select class="hayd-escolha-unica" {{#unless @root.editavel}}disabled{{/unless}}>
+      <option value="">Escolher…</option>
+      {{#each escolha.ausentes}}<option value="{{nome}}" selected>{{nome}} (fora da ficha)</option>{{/each}}
+      {{#each escolha.opcoes}}<option value="{{nome}}" {{#if sel}}selected{{/if}}>{{nome}}</option>{{/each}}
+    </select>
+  {{/if}}
+  {{#if escolha.quebrado}}
+  <span class="hayd-nota hayd-erro"><i class="fa-solid fa-link-slash"></i> {{escolha.avisoQuebrado}}</span>
+  {{#if @root.editavel}}
+    {{#each escolha.ausentes}}
+      {{#if sugestao}}
+      <button type="button" class="hayd-btn hayd-btn-revincular" data-acao="escolha-revincular" data-nome="{{nome}}" data-sugestao="{{sugestao}}" data-tooltip="Troca o vínculo sem mexer no resto da entrada">
+        <i class="fa-solid fa-link"></i> Revincular a “{{sugestao}}”
+      </button>
+      {{/if}}
+    {{/each}}
+  {{/if}}
+  {{/if}}
+  {{#if escolha.aviso}}<span class="hayd-nota hayd-aviso">{{escolha.aviso}}</span>{{/if}}
+</div>
+{{/inline}}
+
+{{!-- ── Painel da automação própria de uma entrada ── --}}
+{{#*inline "hayd-painel"}}
+<div class="hayd-painel">
+  {{#if painel.carga}}
+    <span class="hayd-painel-rotulo"><i class="fa-solid fa-syringe"></i> Doses carregadas ({{painel.doses.length}}/{{painel.max}})</span>
+    {{#if painel.doses.length}}
+    <ul class="hayd-mini-lista">
+      {{#each painel.doses}}
+      <li>
+        <img src="{{img}}" width="20" height="20" alt="">
+        <span>{{nome}}</span>
+        {{#if podeUsar}}<a data-acao="{{acao}}-descarregar" data-indice="{{indice}}" data-tooltip="Remover e devolver ao inventário"><i class="fa-solid fa-rotate-left"></i></a>{{/if}}
+      </li>
+      {{/each}}
+    </ul>
+    {{else}}
+    <span class="hayd-vazio">Nenhuma dose carregada.</span>
+    {{/if}}
+    {{#if painel.podeCarregar}}
+    <div class="hayd-botoes">
+      <button type="button" class="hayd-btn" data-acao="{{painel.acao}}-carregar"><i class="fa-solid fa-flask"></i> Carregar</button>
+    </div>
+    {{/if}}
+    <span class="hayd-nota">{{painel.dica}}</span>
+  {{/if}}
+
+  {{#if painel.conjuradora}}
+    <span class="hayd-painel-rotulo"><i class="fa-solid fa-wand-sparkles"></i> Magia guardada</span>
+    {{#if painel.magia}}
+    <ul class="hayd-mini-lista">
+      <li>
+        <img src="{{painel.magia.img}}" width="20" height="20" alt="">
+        <span>{{painel.magia.nome}}{{#if painel.magia.resumo}} <small>({{painel.magia.resumo}})</small>{{/if}}</span>
+        <small>{{painel.magia.custo}} PM</small>
+      </li>
+    </ul>
+    {{else}}
+    <span class="hayd-vazio">Nenhuma magia guardada.</span>
+    {{/if}}
+    {{#if painel.podeUsar}}
+    <div class="hayd-botoes">
+      <button type="button" class="hayd-btn" data-acao="conjuradora-carregar"><i class="fa-solid fa-book-open"></i> {{#if painel.magia}}Trocar magia{{else}}Guardar magia{{/if}}</button>
+      {{#if painel.magia}}
+      <button type="button" class="hayd-btn" data-acao="conjuradora-disparar"><i class="fa-solid fa-bolt"></i> Disparar</button>
+      <button type="button" class="hayd-btn" data-acao="conjuradora-descartar"><i class="fa-solid fa-trash-can"></i> Descartar</button>
+      {{/if}}
+    </div>
+    {{/if}}
+    {{#if painel.semAtor}}
+    <span class="hayd-nota">Coloque a arma na ficha de um personagem para guardar uma magia.</span>
+    {{else}}
+    <span class="hayd-nota">A magia é configurada e paga ao guardar; ao acertar, o cartão do ataque oferece o disparo.</span>
+    {{/if}}
+  {{/if}}
+
+  {{#if painel.dancarina}}
+  <div class="hayd-linha-ctrl">
+    <span class="hayd-estado {{#if painel.ativa}}hayd-on{{/if}}"><i class="fa-solid fa-feather-pointed"></i> {{#if painel.ativa}}Dançando (sustentada){{else}}Inativa{{/if}}</span>
+    {{#if painel.podeUsar}}
+      {{#if painel.ativa}}
+      <button type="button" class="hayd-btn" data-acao="dancarina-desativar"><i class="fa-solid fa-ban"></i> Desativar</button>
+      {{else}}
+      <button type="button" class="hayd-btn" data-acao="dancarina-ativar"><i class="fa-solid fa-play"></i> Ativar (1 PM)</button>
+      {{/if}}
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{#if painel.frenetica}}
+  <div class="hayd-linha-ctrl">
+    <span class="hayd-estado"><i class="fa-solid fa-fire-flame-curved"></i> Bônus: <strong>+{{painel.bonus}}</strong> / +{{painel.max}}</span>
+    {{#if painel.podeEditar}}
+    <a data-acao="frenetica-menos" class="hayd-icone-btn {{#unless painel.podeMenos}}hayd-off{{/unless}}" data-tooltip="Diminuir (sem custo)"><i class="fa-solid fa-minus"></i></a>
+    <a data-acao="frenetica-mais" class="hayd-icone-btn {{#unless painel.podeMais}}hayd-off{{/unless}}" data-tooltip="Aumentar (sem custo)"><i class="fa-solid fa-plus"></i></a>
+    {{/if}}
+    {{#if painel.podeUsar}}
+    <button type="button" class="hayd-btn" data-acao="frenetica-gastar" {{#unless painel.podeMais}}disabled{{/unless}}><i class="fa-solid fa-bolt"></i> Gastar 1 PM</button>
+    {{/if}}
+  </div>
+  {{/if}}
+
+  {{#if painel.piedosa}}
+  <div class="hayd-linha-ctrl">
+    <span class="hayd-estado {{#if painel.ativa}}hayd-on{{/if}}"><i class="fa-solid fa-dove"></i> {{#if painel.ativa}}Ativa (+1d8, dano não letal){{else}}Desativada{{/if}}</span>
+    {{#if painel.podeUsar}}
+    <button type="button" class="hayd-btn" data-acao="piedosa-alternar"><i class="fa-solid fa-power-off"></i> {{#if painel.ativa}}Desativar{{else}}Ativar{{/if}} (1 PM)</button>
+    {{/if}}
+  </div>
+  {{/if}}
+</div>
+{{/inline}}
+
+{{!-- ── Uma entrada aplicada (melhoria, encanto ou material) ── --}}
+{{#*inline "hayd-entrada"}}
+<li class="hayd-entrada{{#if desativada}} hayd-desativada{{/if}}{{#if ehMaterial}} hayd-material-linha{{/if}}{{#if quebrada}} hayd-entrada-quebrada{{/if}}" data-entrada-id="{{id}}" data-lista="{{lista}}">
+  <div class="hayd-info{{#if suprimida}} hayd-suprimida{{/if}}">
+    <strong>{{nome}}
+      {{#if pericia}}<span class="hayd-tag">{{pericia}}</span>{{/if}}
+      {{#if varianteNome}}<span class="hayd-tag">{{varianteNome}}</span>{{/if}}
+      {{#if suprimida}}<span class="hayd-tag hayd-tag-suprimida" data-tooltip="Bônus substituído — não acumula">{{suprimidaTexto}} {{suprimidaNome}}</span>{{/if}}
+      {{#if desativada}}<span class="hayd-tag hayd-tag-desativada" data-tooltip="Automação desligada neste item; o preço e as características continuam">desativada</span>{{/if}}
+      {{#if homebrew}}<i class="fa-solid fa-star hayd-hb" data-tooltip="Homebrew"></i>{{/if}}
+    </strong>
+    <small>{{fonte}}{{#if nEfeitos}} · {{nEfeitos}} efeito(s){{else}} · manual{{/if}}</small>
+    <span>{{beneficio}}</span>
+    {{#if nota}}<em class="hayd-nota-entrada">{{nota}}</em>{{/if}}
+    {{#if variantes}}
+    <div class="hayd-painel hayd-linha-ctrl">
+      <span class="hayd-painel-rotulo"><i class="fa-solid fa-shapes"></i> Aplicado como</span>
+      <select class="hayd-variante" {{#unless @root.editavel}}disabled{{/unless}}>
+        {{#each variantes}}<option value="{{key}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+      </select>
+    </div>
+    {{/if}}
+    {{#if escolha}}{{> hayd-escolha}}{{/if}}
+    {{#if painel}}{{> hayd-painel}}{{/if}}
+  </div>
+  {{#if ehMaterial}}
+  <span class="hayd-material-custo">
+    <label>T$</label>
+    <input type="number" class="hayd-custo-material" data-id="{{id}}" value="{{custo}}" min="0" step="1" {{#unless @root.editavel}}disabled{{/unless}}>
+  </span>
+  {{/if}}
+  {{#if @root.editavel}}
+  <span class="hayd-acoes-entrada">
+    <a data-acao="alternar" class="{{#if desativada}}hayd-desligado{{else}}hayd-ligado{{/if}}" data-tooltip="{{#if desativada}}Reativar a automação{{else}}Desativar a automação (mantém o preço){{/if}}"><i class="fa-solid {{#if desativada}}fa-toggle-off{{else}}fa-toggle-on{{/if}}"></i></a>
+    <a class="hayd-remover" data-lista="{{lista}}" data-id="{{id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></a>
+  </span>
+  {{/if}}
+</li>
+{{/inline}}
+
 <div class="hayd-itens-aba">
 
   {{!-- ── Preço ── --}}
@@ -16,7 +194,7 @@
 
   {{!-- ── Filtro de categorias ── --}}
   <div class="hayd-filtro">
-    <label class="hayd-inline" data-tooltip="Permite aplicar melhorias/encantos de outras categorias (ex.: manopla com melhorias de arma)">
+    <label class="hayd-inline" data-tooltip="Permite aplicar melhorias/encantos/materiais de outras categorias (ex.: manopla com melhorias de arma)">
       <input type="checkbox" class="hayd-todas-categorias" {{#if todasCategorias}}checked{{/if}}>
       Mostrar todas as categorias (quebrar o padrão)
     </label>
@@ -36,7 +214,7 @@
         <option value="">— Adicionar melhoria —</option>
         {{#each opcoesMelhorias}}
         <optgroup label="{{this.grupo}}">
-          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.homebrew}} ★{{/if}}</option>{{/each}}
+          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.homebrew}} (homebrew){{/if}}</option>{{/each}}
         </optgroup>
         {{/each}}
       </select>
@@ -44,21 +222,7 @@
     </div>
     {{/if}}
     {{#if melhorias.length}}
-    <ul class="hayd-lista">
-      {{#each melhorias}}
-      <li>
-        <div class="hayd-info {{#if this.suprimida}}hayd-suprimida{{/if}}">
-          <strong>{{this.nome}}{{#if this.pericia}} <span class="hayd-tag">{{this.pericia}}</span>{{/if}}{{#if this.suprimida}} <span class="hayd-tag hayd-tag-suprimida" data-tooltip="Bônus substituído — não acumula">substituída por {{this.suprimidaNome}}</span>{{/if}}{{#if this.homebrew}} ★{{/if}}</strong>
-          <small>{{this.fonte}}{{#if this.nEfeitos}} · {{this.nEfeitos}} efeito(s){{else}} · manual{{/if}}</small>
-          <span>{{this.beneficio}}</span>
-          {{#if this.nota}}<em class="hayd-nota-entrada">{{this.nota}}</em>{{/if}}
-        </div>
-        {{#if ../editavel}}
-        <a class="hayd-remover" data-lista="melhorias" data-id="{{this.id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></a>
-        {{/if}}
-      </li>
-      {{/each}}
-    </ul>
+    <ul class="hayd-lista">{{#each melhorias}}{{> hayd-entrada}}{{/each}}</ul>
     {{else}}
     <p class="hayd-vazio">Nenhuma melhoria aplicada.</p>
     {{/if}}
@@ -73,7 +237,7 @@
         <option value="">— Adicionar encanto —</option>
         {{#each opcoesEncantos}}
         <optgroup label="{{this.grupo}}">
-          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.homebrew}} ★{{/if}}</option>{{/each}}
+          {{#each this.itens}}<option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.homebrew}} (homebrew){{/if}}</option>{{/each}}
         </optgroup>
         {{/each}}
       </select>
@@ -81,21 +245,7 @@
     </div>
     {{/if}}
     {{#if encantos.length}}
-    <ul class="hayd-lista">
-      {{#each encantos}}
-      <li>
-        <div class="hayd-info {{#if this.suprimida}}hayd-suprimida{{/if}}">
-          <strong>{{this.nome}}{{#if this.pericia}} <span class="hayd-tag">{{this.pericia}}</span>{{/if}}{{#if this.suprimida}} <span class="hayd-tag hayd-tag-suprimida" data-tooltip="Bônus substituído — não acumula">substituído por {{this.suprimidaNome}}</span>{{/if}}{{#if this.homebrew}} ★{{/if}}</strong>
-          <small>{{this.fonte}}{{#if this.nEfeitos}} · {{this.nEfeitos}} efeito(s){{else}} · manual{{/if}}</small>
-          <span>{{this.beneficio}}</span>
-          {{#if this.nota}}<em class="hayd-nota-entrada">{{this.nota}}</em>{{/if}}
-        </div>
-        {{#if ../editavel}}
-        <a class="hayd-remover" data-lista="encantos" data-id="{{this.id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></a>
-        {{/if}}
-      </li>
-      {{/each}}
-    </ul>
+    <ul class="hayd-lista">{{#each encantos}}{{> hayd-entrada}}{{/each}}</ul>
     {{else}}
     <p class="hayd-vazio">Nenhum encanto aplicado.</p>
     {{/if}}
@@ -104,93 +254,22 @@
   {{!-- ── Materiais Especiais (destacados) ── --}}
   <section class="hayd-secao hayd-materiais">
     <h3><i class="fa-solid fa-gem"></i> Materiais Especiais</h3>
-    <p class="hayd-nota">Cada material conta como uma melhoria para o preço, mais o custo próprio do material.</p>
+    <p class="hayd-nota">Cada material conta como uma melhoria para o preço, mais o custo próprio do material. Os efeitos seguem a categoria do item (arma, armadura leve ou pesada…), que pode ser trocada em cada material.</p>
     {{#if editavel}}
     <div class="hayd-adicionar">
       <select class="hayd-select-material">
         <option value="">— Adicionar material —</option>
         {{#each opcoesMateriais}}
-        <option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.raro}} (raro){{/if}} — {{this.custoFmt}}{{#if this.homebrew}} ★{{/if}}</option>
+        <option value="{{this.key}}" data-tooltip="{{this.beneficio}}">{{this.nome}}{{#if this.raro}} (raro){{/if}} — {{this.custoFmt}}{{#if this.homebrew}} (homebrew){{/if}}</option>
         {{/each}}
       </select>
       <button type="button" class="hayd-btn hayd-add-material"><i class="fa-solid fa-plus"></i></button>
     </div>
     {{/if}}
     {{#if materiais.length}}
-    <ul class="hayd-lista">
-      {{#each materiais}}
-      <li class="hayd-material-linha">
-        <div class="hayd-info">
-          <strong>{{this.nome}}{{#if this.homebrew}} ★{{/if}}</strong>
-          <small>{{this.fonte}}</small>
-          <span>{{this.beneficio}}</span>
-        </div>
-        <span class="hayd-material-custo">
-          <label>T$</label>
-          <input type="number" class="hayd-custo-material" data-id="{{this.id}}" value="{{this.custo}}" min="0" step="1" {{#unless ../editavel}}disabled{{/unless}}>
-        </span>
-        {{#if ../editavel}}
-        <a class="hayd-remover" data-lista="materiais" data-id="{{this.id}}" data-tooltip="Remover"><i class="fa-solid fa-trash"></i></a>
-        {{/if}}
-      </li>
-      {{/each}}
-    </ul>
+    <ul class="hayd-lista">{{#each materiais}}{{> hayd-entrada}}{{/each}}</ul>
     {{else}}
     <p class="hayd-vazio">Nenhum material especial.</p>
     {{/if}}
   </section>
-
-  {{!-- ── Injeção Alquímica ── --}}
-  {{#if temInjecao}}
-  <section class="hayd-secao hayd-alquimica">
-    <h3><i class="fa-solid fa-syringe"></i> Injeção Alquímica</h3>
-    {{#if alquimicos.length}}
-    <ul class="hayd-lista">
-      {{#each alquimicos}}
-      <li>
-        <img src="{{this.img}}" width="24" height="24">
-        <div class="hayd-info"><strong>{{this.name}}</strong></div>
-        {{#if ../temAtor}}
-        <a class="hayd-descarregar" data-indice="{{@index}}" data-tooltip="Devolver ao inventário"><i class="fa-solid fa-rotate-left"></i></a>
-        {{/if}}
-      </li>
-      {{/each}}
-    </ul>
-    {{else}}
-    <p class="hayd-vazio">Nenhum preparado carregado (capacidade: 2 doses).</p>
-    {{/if}}
-    {{#if temAtor}}
-    <p class="hayd-nota">Carregue preparados pelo clique direito na arma, na ficha do personagem. Ao atacar, o cartão no chat oferece a injeção.</p>
-    {{else}}
-    <p class="hayd-nota">Coloque a arma na ficha de um personagem para carregar preparados.</p>
-    {{/if}}
-  </section>
-  {{/if}}
-
-  {{!-- ── Injetora ── --}}
-  {{#if temInjetora}}
-  <section class="hayd-secao hayd-alquimica">
-    <h3><i class="fa-solid fa-syringe"></i> Injetora</h3>
-    {{#if dosesInjetora.length}}
-    <ul class="hayd-lista">
-      {{#each dosesInjetora}}
-      <li>
-        <img src="{{this.img}}" width="24" height="24">
-        <div class="hayd-info"><strong>{{this.name}}</strong></div>
-        {{#if ../temAtor}}
-        <a class="hayd-descarregar-injetora" data-indice="{{@index}}" data-tooltip="Devolver ao inventário"><i class="fa-solid fa-rotate-left"></i></a>
-        {{/if}}
-      </li>
-      {{/each}}
-    </ul>
-    {{else}}
-    <p class="hayd-vazio">Nenhuma dose carregada (capacidade: 1 dose).</p>
-    {{/if}}
-    {{#if temAtor}}
-    <p class="hayd-nota">Carregue e ingira a dose pelo clique direito na armadura, na ficha do personagem (carregar: ação completa; ingerir: ação de movimento).</p>
-    {{else}}
-    <p class="hayd-nota">Coloque a armadura na ficha de um personagem para carregar a dose.</p>
-    {{/if}}
-  </section>
-  {{/if}}
 </div>

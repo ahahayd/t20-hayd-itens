@@ -2,18 +2,23 @@
  * t20-hayd-itens | alquimica.mjs
  * Automação das melhorias com doses carregáveis:
  *
- *  - Injeção Alquímica (T20 p.165, arma, 2 doses): clique direito na arma
- *    para carregar preparados; ao atacar, o cartão da arma no chat oferece
- *    o botão de injetar.
- *  - Injetora (HA p.240, armadura, 1 dose): clique direito na armadura para
- *    carregar um preparado ou poção; ingerir (ação de movimento) também
- *    pelo menu de contexto.
+ *  - Injeção Alquímica (T20 p.165, arma, 2 doses): carregue preparados
+ *    pela aba Melhorias & Encantos ou pelo clique direito na arma; ao
+ *    atacar, o cartão da arma no chat oferece o botão de injetar.
+ *  - Injetora (HA p.240, armadura, 1 dose): carregue um preparado ou
+ *    poção; ingerir (ação de movimento) pelo menu de contexto.
  *
  * Em ambas, o uso passa pela caixa de diálogo de rolagem do sistema
  * (permitindo escolher poderes/aprimoramentos) e a dose é consumida.
+ * Carregar registra no chat o que entrou no item.
+ *
+ * Também monta o menu de contexto da Conjuradora (guardar/disparar).
  */
 
 import { MODULO, obterEntrada } from "./catalogo.mjs";
+import { dadosDoItem, registroAtivo } from "./efeitos.mjs";
+import { esc, cartaoHTML, listaHTML, postar } from "./mensagens.mjs";
+import { especialLigado, carregarConjuradora, dispararConjuradora } from "./automacoes.mjs";
 
 const { DialogV2 } = foundry.applications.api;
 
@@ -53,10 +58,11 @@ export function automacaoAlquimicaAtiva() {
   return automacaoAtiva("injecao-alquimica");
 }
 
-function temMelhoria(item, chave) {
+/** O item tem a melhoria com doses, ligada (pelo GM e na aba)? */
+export function temMelhoria(item, chave) {
   if (!automacaoAtiva(chave)) return false;
   if (item.type !== CONFIGS[chave].tipoItem) return false;
-  return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === chave);
+  return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === chave && !m.desativada);
 }
 
 /* ------------------------------------------------------------------ */
@@ -66,10 +72,11 @@ function temMelhoria(item, chave) {
 async function carregarDose(item, chave) {
   const cfg = CONFIGS[chave];
   const ator = item.actor;
-  if (!ator) return;
+  if (!ator) return ui.notifications.warn(`Coloque o item na ficha de um personagem para carregar a ${cfg.rotulo}.`);
 
   const doses = item.getFlag(MODULO, cfg.flag) ?? [];
-  if (doses.length >= cfg.max) {
+  const livres = cfg.max - doses.length;
+  if (livres <= 0) {
     return ui.notifications.warn(`${cfg.rotulo}: capacidade máxima de ${cfg.max} dose${cfg.max > 1 ? "s" : ""}.`);
   }
 
@@ -80,31 +87,57 @@ async function carregarDose(item, chave) {
     return ui.notifications.warn("Nenhum preparado alquímico ou poção (consumível) encontrado no inventário.");
   }
 
-  const opcoes = candidatos
-    .map(i => `<option value="${i.id}">${i.name} (${i.system?.qtd ?? 1}x)</option>`)
-    .join("");
+  const linhas = candidatos.map(i => {
+    const qtd = Number(i.system?.qtd ?? 1) || 1;
+    return `<li class="hayd-carga-linha">
+        <img src="${esc(i.img)}" width="28" height="28" alt="">
+        <span class="hayd-carga-nome">${esc(i.name)} <small>(${qtd}x)</small></span>
+        <input type="number" name="q.${i.id}" value="0" min="0" max="${Math.min(qtd, livres)}" step="1">
+      </li>`;
+  }).join("");
   const dados = await DialogV2.prompt({
     window: { title: `Carregar ${cfg.rotulo} — ${item.name}` },
-    content: `<p>Escolha a dose a carregar (${doses.length}/${cfg.max}; ${cfg.dicaCarregar}):</p>
-      <div class="form-group"><select name="itemId">${opcoes}</select></div>`,
+    content: `<p>Quantas doses de cada item carregar? (${doses.length}/${cfg.max} carregadas, ${livres} livre${livres > 1 ? "s" : ""}; ${cfg.dicaCarregar})</p>
+      <ul class="hayd-carga-lista">${linhas}</ul>`,
     ok: { label: "Carregar", callback: (ev, btn) => new foundry.applications.ux.FormDataExtended(btn.form).object }
   }).catch(() => null);
-  if (!dados?.itemId) return;
+  if (!dados) return;
 
-  const fonte = ator.items.get(dados.itemId);
-  if (!fonte) return;
+  const pedidos = candidatos
+    .map(fonte => ({ fonte, qtd: Math.max(0, Math.floor(Number(dados[`q.${fonte.id}`]) || 0)) }))
+    .filter(p => p.qtd > 0);
+  const total = pedidos.reduce((t, p) => t + p.qtd, 0);
+  if (!total) return;
+  if (total > livres) {
+    return ui.notifications.warn(`${cfg.rotulo}: só cabe${livres > 1 ? "m" : ""} mais ${livres} dose${livres > 1 ? "s" : ""}.`);
+  }
 
-  // Uma dose = um item com qtd 1
-  const carga = fonte.toObject();
-  carga.system.qtd = 1;
-  delete carga._id;
+  // Uma dose = um item com qtd 1, tirada do inventário.
+  const cargas = [];
+  const atualizar = [];
+  const apagar = [];
+  for (const { fonte, qtd } of pedidos) {
+    const disponivel = Number(fonte.system?.qtd ?? 1) || 1;
+    const usar = Math.min(qtd, disponivel);
+    for (let n = 0; n < usar; n++) {
+      const carga = fonte.toObject();
+      carga.system.qtd = 1;
+      delete carga._id;
+      cargas.push(carga);
+    }
+    if (disponivel > usar) atualizar.push({ _id: fonte.id, "system.qtd": disponivel - usar });
+    else apagar.push(fonte.id);
+  }
+  if (atualizar.length) await ator.updateEmbeddedDocuments("Item", atualizar);
+  if (apagar.length) await ator.deleteEmbeddedDocuments("Item", apagar);
+  await item.setFlag(MODULO, cfg.flag, [...doses, ...cargas]);
 
-  const qtd = Number(fonte.system?.qtd ?? 1) || 1;
-  if (qtd > 1) await fonte.update({ "system.qtd": qtd - 1 });
-  else await fonte.delete();
-
-  await item.setFlag(MODULO, cfg.flag, [...doses, carga]);
-  ui.notifications.info(`${carga.name} carregado em ${item.name} (${doses.length + 1}/${cfg.max}).`);
+  await postar(ator, cartaoHTML({
+    icone: "fa-solid fa-syringe",
+    titulo: `${esc(ator.name)} carregou a ${cfg.rotulo} do(a) ${esc(item.name)} com:`,
+    corpo: listaHTML(cargas.map(c => ({ img: c.img, nome: c.name }))),
+    nota: `${doses.length + cargas.length}/${cfg.max} dose${cfg.max > 1 ? "s" : ""} carregada${cfg.max > 1 ? "s" : ""}.`
+  }));
 }
 
 async function descarregarDose(item, chave, indice) {
@@ -127,18 +160,23 @@ async function descarregarDose(item, chave, indice) {
 
 let _usandoDose = false;
 
-async function usarDose(item, chave, indice) {
-  if (_usandoDose) return;
+/** Usa uma dose pelo fluxo normal do sistema. Devolve true se foi usada. */
+export async function usarDose(item, chave, indice) {
+  if (_usandoDose) return false;
   const cfg = CONFIGS[chave];
   const ator = item.actor;
-  if (!ator) return;
+  if (!ator) return false;
 
   const doses = foundry.utils.deepClone(item.getFlag(MODULO, cfg.flag) ?? []);
   const dose = doses[indice];
-  if (!dose) return ui.notifications.warn("Esta dose já foi usada.");
+  if (!dose) {
+    ui.notifications.warn("Esta dose já foi usada.");
+    return true;
+  }
 
   _usandoDose = true;
   let temp = null;
+  let usada = false;
   try {
     // Cria o item temporário no ator e usa o fluxo normal do sistema,
     // com a caixa de diálogo de uso (bônus, poderes, aprimoramentos).
@@ -153,6 +191,7 @@ async function usarDose(item, chave, indice) {
       // Uso confirmado: consome a dose
       doses.splice(indice, 1);
       await item.setFlag(MODULO, cfg.flag, doses);
+      usada = true;
     }
   } catch (err) {
     console.error(`${MODULO} | Falha ao usar dose (${cfg.rotulo})`, err);
@@ -163,6 +202,7 @@ async function usarDose(item, chave, indice) {
     }
     _usandoDose = false;
   }
+  return usada;
 }
 
 /* API pública mantida (Injeção Alquímica) + Injetora */
@@ -180,13 +220,14 @@ export function opcoesMenuContexto(item, menuItems) {
 
   // Injeção Alquímica — arma (uso pelo cartão de ataque no chat)
   if (temMelhoria(item, "injecao-alquimica")) {
-    menuItems.push({
-      name: "Injeção Alquímica: carregar",
-      icon: '<i class="fa-solid fa-syringe"></i>',
-      callback: () => carregarDose(item, "injecao-alquimica")
-    });
-
     const doses = item.getFlag(MODULO, "alquimicos") ?? [];
+    if (doses.length < CONFIGS["injecao-alquimica"].max) {
+      menuItems.push({
+        name: "Injeção Alquímica: carregar",
+        icon: '<i class="fa-solid fa-syringe"></i>',
+        callback: () => carregarDose(item, "injecao-alquimica")
+      });
+    }
     if (doses.length) {
       menuItems.push({
         name: `Injeção Alquímica: descarregar (${doses.length})`,
@@ -219,43 +260,24 @@ export function opcoesMenuContexto(item, menuItems) {
       });
     }
   }
-}
 
-/* ------------------------------------------------------------------ */
-/* Botão no cartão de chat da arma (Injeção Alquímica)                */
-/* ------------------------------------------------------------------ */
-
-export function aoRenderizarMensagem(mensagem, html) {
-  const card = html.querySelector?.(".chat-card.item-card") ?? null;
-  if (!card) return;
-
-  const actorId = card.dataset.actorId;
-  const itemId = card.dataset.itemId;
-  if (!actorId || !itemId) return;
-
-  const ator = game.actors.get(actorId);
-  const arma = ator?.items?.get(itemId);
-  if (!ator || !arma || arma.type !== "arma") return;
-  if (!temMelhoria(arma, "injecao-alquimica")) return;
-  if (!ator.isOwner) return;
-
-  const doses = arma.getFlag(MODULO, "alquimicos") ?? [];
-  if (!doses.length) return;
-  if (card.querySelector(".hayd-injetar")) return;
-
-  const rodape = document.createElement("footer");
-  rodape.className = "card-item-effects flexcol hayd-injecao-rodape";
-  for (let i = 0; i < doses.length; i++) {
-    const dose = doses[i];
-    const btn = document.createElement("button");
-    btn.className = "hayd-injetar";
-    btn.dataset.indice = String(i);
-    btn.innerHTML = `<i class="fa-solid fa-syringe"></i> Injetar ${dose.name}`;
-    btn.addEventListener("click", ev => {
-      ev.preventDefault();
-      usarDose(arma, "injecao-alquimica", Number(ev.currentTarget.dataset.indice));
-    });
-    rodape.appendChild(btn);
+  // Conjuradora — arma (guardar magia / disparar a guardada)
+  if (item.type === "arma" && especialLigado("conjuradora")) {
+    const conj = registroAtivo(item, "conjuradora");
+    if (conj) {
+      const magia = dadosDoItem(item).estado[conj.reg.id]?.magia;
+      menuItems.push({
+        name: magia ? "Conjuradora: trocar magia guardada" : "Conjuradora: guardar magia",
+        icon: '<i class="fa-solid fa-book-open"></i>',
+        callback: () => carregarConjuradora(item, conj.reg.id)
+      });
+      if (magia) {
+        menuItems.push({
+          name: `Conjuradora: disparar ${magia.dados?.name ?? "magia"}`,
+          icon: '<i class="fa-solid fa-wand-sparkles"></i>',
+          callback: () => dispararConjuradora(item, conj.reg.id)
+        });
+      }
+    }
   }
-  card.appendChild(rodape);
 }

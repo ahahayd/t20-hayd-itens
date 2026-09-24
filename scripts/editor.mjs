@@ -110,22 +110,49 @@ const TIPOS = [
   { v: "ataque", l: "Rider de ataque (arma que modifica ataques)" },
   { v: "passivo", l: "Passivo (sempre ativo no personagem)" },
   { v: "pericia", l: "Perícia (aparece no teste da perícia)" },
-  { v: "magia", l: "Magia (aparece ao conjurar)" }
+  { v: "magia", l: "Magia (aparece ao conjurar)" },
+  { v: "poder", l: "Poder (aparece ao usar poderes)" }
 ];
+
+/* Automações exclusivas que o GM pode desligar no editor. As marcações
+ * "ameacadora"/"lancinante" são internas (como o efeito é montado). */
+const ESPECIAIS_DESLIGAVEIS = {
+  alquimica: "Injeção Alquímica — carregar/injetar preparados",
+  injetora: "Injetora — carregar/ingerir preparados e poções",
+  conjuradora: "Conjuradora — guardar e disparar magias",
+  dancarina: "Dançarina — ativar e sustentar a cada turno",
+  frenetica: "Frenética — bônus acumulado controlado pela aba",
+  piedosa: "Piedosa — ativar/desativar pagando 1 PM",
+  sanguinaria: "Sanguinária — aplicar/agravar sangramento pelo chat",
+  ressonante: "Ressonante — onda de choque pelo chat",
+  assassina: "Assassina — dados d8 e rerrolagem de 1s no Ataque Furtivo",
+  kraken: "Pena de Kraken — crítico sobe o dano da arma em dois passos"
+};
 
 function modoValido(m) {
   const n = Number(m);
   return [0, 1, 2, 3, 4, 5].includes(n) ? n : 2;
 }
 
+/* Campos que a UI do editor edita diretamente. Os demais (escolha de
+ * poder/magia, modelos do chat, gatilhos, rolagens extras, variantes…)
+ * viajam num campo oculto e voltam intactos ao salvar. */
+const CAMPOS_EDITADOS = ["passivo", "skill", "spell", "poder", "ataque", "custo", "opcional", "cena", "nome", "desc", "condicao", "changes"];
+
 /* Converte um efeito do catálogo → forma editável na UI. */
 function efeitoParaUI(ef) {
   const tipo = ef.passivo ? "passivo"
     : ef.skill ? "pericia"
     : ef.spell ? "magia"
+    : ef.poder ? "poder"
     : ef.ataque ? "ataque"
     : "uso";
   const conds = ef.condicao ? (Array.isArray(ef.condicao) ? ef.condicao : [ef.condicao]) : [];
+  const extra = {};
+  for (const [k, v] of Object.entries(ef)) if (!CAMPOS_EDITADOS.includes(k)) extra[k] = v;
+  // Magia E poder (Canônico, Horrenda): o tipo mostra "magia" e o poder
+  // segue como campo extra.
+  if (tipo === "magia" && ef.poder) extra.poder = true;
   return {
     tipo,
     custo: ef.custo ?? "",
@@ -134,16 +161,22 @@ function efeitoParaUI(ef) {
     nome: ef.nome ?? "",
     desc: ef.desc ?? "",
     conds,
-    changes: (ef.changes ?? []).map(c => ({ key: c.key, mode: c.mode ?? 2, value: String(c.value) }))
+    changes: (ef.changes ?? []).map(c => ({ key: c.key, mode: c.mode ?? 2, value: String(c.value) })),
+    extra: Object.keys(extra).length ? JSON.stringify(extra) : ""
   };
 }
 
 /* Converte a forma da UI → efeito do catálogo. */
 function uiParaEfeito(u) {
-  const ef = {};
+  let ef = {};
+  if (u.extra) {
+    try { ef = JSON.parse(u.extra) ?? {}; }
+    catch { ef = {}; }
+  }
   if (u.tipo === "passivo") ef.passivo = true;
   else if (u.tipo === "pericia") ef.skill = true;
   else if (u.tipo === "magia") ef.spell = true;
+  else if (u.tipo === "poder") ef.poder = true;
   else if (u.tipo === "ataque") ef.ataque = true;
   if (u.custo !== "" && u.custo != null) ef.custo = String(u.custo).trim();
   if (u.opcional) ef.opcional = true;
@@ -184,7 +217,7 @@ class EditorManagerApp extends HandlebarsApplicationMixin(ApplicationV2) {
       grupo: e.grupo,
       fonte: e.fonte ?? "homebrew",
       beneficio: e.beneficio ?? "",
-      especial: ["alquimica", "injetora"].includes(e.especial),
+      especial: !!ESPECIAIS_DESLIGAVEIS[e.especial],
       modificado: !!overrides[e.key]
     }));
     if (this._grupo) entradas = entradas.filter(e => e.grupo === this._grupo);
@@ -246,15 +279,9 @@ class EditorEntradaApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const def = obterEntrada(key) ?? {};
     this._base = obterEntradaBase(key) ?? {};
     this._beneficio = def.beneficio ?? "";
-    // Só automações exclusivas de fato são desabilitáveis pelo GM. Hoje,
-    // apenas a Injeção Alquímica (carregar/injetar preparados). As marcações
-    // "ameacadora"/"lancinante" são internas (como o efeito é montado).
-    const NOMES_ESPECIAL = {
-      alquimica: "Injeção Alquímica — carregar/injetar preparados",
-      injetora: "Injetora — carregar/ingerir preparados e poções"
-    };
-    this._temEspecial = ["alquimica", "injetora"].includes(this._base.especial);
-    this._especialNome = NOMES_ESPECIAL[this._base.especial] ?? this._base.especial ?? "";
+    // Só automações exclusivas de fato são desabilitáveis pelo GM.
+    this._temEspecial = !!ESPECIAIS_DESLIGAVEIS[this._base.especial];
+    this._especialNome = ESPECIAIS_DESLIGAVEIS[this._base.especial] ?? this._base.especial ?? "";
     this._especialDesabilitado = !!obterOverrides()[key]?.especialDesabilitado;
     this._efeitos = (def.efeitos ?? []).map(efeitoParaUI);
   }
@@ -301,7 +328,8 @@ class EditorEntradaApp extends HandlebarsApplicationMixin(ApplicationV2) {
         nome: e.nome ?? "",
         desc: e.desc ?? "",
         conds,
-        changes
+        changes,
+        extra: e.extra ?? ""
       };
     });
   }
@@ -310,7 +338,7 @@ class EditorEntradaApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const el = this.element;
     el.querySelector(".hayd-add-efeito")?.addEventListener("click", () => {
       this._lerForm();
-      this._efeitos.push({ tipo: "uso", custo: "", opcional: false, cena: false, nome: "", desc: "", conds: [], changes: [] });
+      this._efeitos.push({ tipo: "uso", custo: "", opcional: false, cena: false, nome: "", desc: "", conds: [], changes: [], extra: "" });
       this.render();
     });
     el.querySelectorAll(".hayd-rem-efeito").forEach(b => b.addEventListener("click", () => {

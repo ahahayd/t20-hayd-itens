@@ -91,39 +91,95 @@
 }
 .hayd-tag-suprimida { border-color: rgba(168, 50, 42, 0.6); color: #a8322a; }
 .hayd-suprimida > span, .hayd-suprimida > small { opacity: 0.55; }
-.hayd-remover, .hayd-descarregar {
+.hayd-remover {
   flex: 0 0 auto;
   cursor: pointer;
   opacity: 0.7;
 }
 .hayd-remover:hover { opacity: 1; color: #a8322a; }
-.hayd-descarregar:hover { opacity: 1; }
-.hayd-material-custo { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; }
+.hayd-material-custo { display: flex; align-items: center; gap: 3px; flex: 0 0 auto; padding-top: 2px; }
 .hayd-material-custo label { font-size: 0.75em; opacity: 0.7; }
 .hayd-custo-material { width: 76px; height: 22px; }
-.hayd-material-linha img { border: none; }
 
 .hayd-vazio { font-size: 0.85em; opacity: 0.65; font-style: italic; margin: 2px 0; }
 .hayd-nota { font-size: 0.78em; opacity: 0.75; margin: 2px 0; }
 
-/* ── Injeção alquímica ── */
-.hayd-alquimica {
-  border: 1px solid rgba(90, 140, 90, 0.5);
-  border-radius: 4px;
-  padding: 6px 8px;
-  background: rgba(90, 140, 90, 0.06);
-}
-.hayd-alquimica h3 i { color: #4e8a4e; }
-.hayd-alquimica img { flex: 0 0 auto; border-radius: 3px; }
+/* ── Entradas: ligar/desligar, homebrew ── */
+.hayd-lista li.hayd-entrada { align-items: flex-start; }
+.hayd-acoes-entrada { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; padding-top: 2px; }
+.hayd-acoes-entrada a { cursor: pointer; opacity: 0.7; }
+.hayd-acoes-entrada a:hover { opacity: 1; }
+.hayd-acoes-entrada .hayd-ligado { color: #4e8a4e; }
+.hayd-desativada .hayd-info > strong,
+.hayd-desativada .hayd-info > small,
+.hayd-desativada .hayd-info > span { opacity: 0.55; }
+.hayd-tag-desativada { font-style: italic; }
+.hayd-hb { font-size: 0.75em; color: #b48c28; margin-left: 2px; }
 
-.hayd-injecao-rodape { gap: 3px; }
-.hayd-injetar {
+/* ── Painéis de automação dentro da entrada ── */
+.hayd-painel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 3px 0 3px 8px;
+  border-left: 2px solid rgba(128, 128, 128, 0.35);
+  font-size: 0.9em;
+}
+.hayd-painel-rotulo { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8em; text-transform: uppercase; opacity: 0.75; }
+.hayd-linha-ctrl { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 6px; }
+.hayd-painel select { width: auto; max-width: 100%; height: 22px; }
+.hayd-escolha-unica { min-width: 160px; }
+.hayd-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.hayd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  border-radius: 10px;
+}
+.hayd-chip a { cursor: pointer; opacity: 0.7; }
+.hayd-chip a:hover { opacity: 1; color: #a8322a; }
+.hayd-aviso { color: #a8322a; opacity: 0.9; }
+.hayd-mini-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.hayd-lista .hayd-mini-lista li { display: flex; align-items: center; gap: 6px; padding: 0; border: none; }
+.hayd-mini-lista img { flex: 0 0 auto; border: none; border-radius: 3px; }
+.hayd-mini-lista span { flex: 1; }
+.hayd-mini-lista a { cursor: pointer; opacity: 0.7; }
+.hayd-mini-lista a:hover { opacity: 1; }
+.hayd-botoes { display: flex; flex-wrap: wrap; gap: 4px; }
+.hayd-painel .hayd-btn { padding: 1px 8px; }
+.hayd-estado { display: inline-flex; align-items: center; gap: 4px; }
+.hayd-estado.hayd-on { color: #4e8a4e; font-weight: 600; }
+.hayd-icone-btn { cursor: pointer; opacity: 0.75; padding: 0 3px; }
+.hayd-icone-btn:hover { opacity: 1; }
+.hayd-icone-btn.hayd-off { opacity: 0.25; pointer-events: none; }
+
+/* ── Diálogo de carga (Injeção Alquímica / Injetora) ── */
+.hayd-carga-lista { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.hayd-carga-linha { display: flex; align-items: center; gap: 8px; }
+.hayd-carga-linha img { flex: 0 0 auto; border: none; }
+.hayd-carga-nome { flex: 1; }
+.hayd-carga-linha input { flex: 0 0 auto; width: 56px; }
+
+/* ── Chat: cartões do módulo e botões no cartão do ataque ── */
+.hayd-itens-card p { margin: 2px 0; }
+.hayd-itens-lista { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.hayd-itens-lista li { display: flex; align-items: center; gap: 6px; }
+.hayd-itens-lista img { flex: 0 0 auto; border: none; }
+.hayd-itens-lista small { opacity: 0.75; }
+.hayd-itens-acoes { display: flex; gap: 4px; margin-top: 6px; }
+.hayd-itens-acoes button { flex: 1; cursor: pointer; }
+.hayd-cartao-rodape { gap: 3px; }
+.hayd-cartao-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   line-height: 1.6;
 }
+.hayd-receber { margin: 2px 0 4px; }
 
 /* ── Diálogos (homebrew) ── */
 .hayd-scroll { max-height: min(70vh, 640px); overflow-y: auto; padding-right: 6px; }
@@ -168,6 +224,7 @@
 .hayd-editor-efeitos { display: flex; flex-direction: column; gap: 8px; }
 .hayd-editor-efeito { border: 1px solid rgba(128, 128, 128, 0.35); border-radius: 4px; padding: 6px 8px; }
 .hayd-editor-efeito legend { font-size: 0.85em; font-weight: 600; padding: 0 4px; display: flex; align-items: center; gap: 6px; }
+.hayd-extra-ic { color: #b48c28; opacity: 0.85; }
 .hayd-editor-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: end; }
 .hayd-editor-grid .hayd-checks { display: flex; flex-direction: column; gap: 2px; }
 .hayd-editor-entrada .form-group { margin: 4px 0; }
@@ -184,3 +241,19 @@
 .hayd-editor-botoes { display: flex; gap: 6px; }
 .hayd-editor-botoes .hayd-btn { width: auto; padding: 3px 12px; }
 .hayd-primario { font-weight: 600; }
+
+/* --- Vínculo perdido (poder renomeado ou removido) ---------------------- */
+
+.hayd-entrada-quebrada { border-left: 3px solid #a8322a; }
+.hayd-painel.hayd-quebrada {
+  border: 1px solid rgba(168, 50, 42, 0.55);
+  border-radius: 4px;
+  padding: 4px 6px;
+  background: rgba(168, 50, 42, 0.08);
+}
+.hayd-erro { color: #a8322a; opacity: 1; font-weight: 600; }
+.hayd-chip-quebrado {
+  border-color: rgba(168, 50, 42, 0.7);
+  color: #a8322a;
+}
+.hayd-btn-revincular { align-self: flex-start; margin-top: 2px; }

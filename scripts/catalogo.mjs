@@ -21,6 +21,8 @@
  *   essencia, fogo, frio, impacto, luz, psiquico, perfuracao, trevas.
  */
 
+import { preencherMarcadores, temMarcadores } from "./regras.mjs";
+
 export const MODULO = "t20-hayd-itens";
 
 /** true quando o módulo de tema t20-hayd-ui está ativo no mundo. */
@@ -131,6 +133,9 @@ export const CONDICOES = {
   vulneravel: "Vulnerável"
 };
 
+/** Redução de dano de um tipo (dano = RD geral), como o próprio sistema monta. */
+const RD = (tipo, valor) => ({ key: `system.tracos.resistencias.${tipo}.bonus`, value: String(valor) });
+
 /* ================================================================== */
 /* MELHORIAS                                                          */
 /* ================================================================== */
@@ -185,7 +190,7 @@ export const MELHORIAS = {
   "farpada": { nome: "Farpada", tipo: "melhoria", cats: ["arma", "municao"], fonte: "HA p.239",
     beneficio: "Acerto crítico deixa o alvo sangrando, com −5 em Constituição para remover (só corte/perfuração)",
     prereqs: ["cruel"],
-    efeitos: [{ condicao: "sangrando", opcional: true, desc: "Aplique ao alvo em um acerto crítico (−5 em Con para remover)" }] },
+    efeitos: [{ condicao: "sangrando", desc: "Aplique ao alvo em um acerto crítico (−5 em Con para remover)" }] },
 
   "fosforo": { nome: "Fósforo", tipo: "melhoria", cats: ["municao"], fonte: "HA p.239",
     beneficio: "Dano −1 passo; ao atingir, ofusca o alvo por 1 rodada (só munições)",
@@ -194,7 +199,11 @@ export const MELHORIAS = {
 
   "guarda": { nome: "Guarda", tipo: "melhoria", cats: ["arma"], fonte: "HA p.239",
     beneficio: "+1 na Defesa e em testes contra manobras (só corpo a corpo)",
-    efeitos: [{ passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "1" }] }] },
+    efeitos: [
+      { passivo: true, changes: [{ key: "system.attributes.defesa.bonus", value: "1" }] },
+      { nome: "Resistir a manobras", changes: [{ key: "ataque", value: "1" }],
+        opcional: true, desc: "+1 no teste para resistir a uma manobra de combate" }
+    ] },
 
   "incendiaria": { nome: "Incendiária", tipo: "melhoria", cats: ["municao"], fonte: "HA p.239",
     beneficio: "+1 de dano de fogo; se acertar por 5 ou mais, deixa o alvo em chamas (só munições)",
@@ -203,12 +212,14 @@ export const MELHORIAS = {
 
   "pressurizada": { nome: "Pressurizada", tipo: "melhoria", cats: ["arma"], fonte: "HA p.240",
     beneficio: "Após pressurizar (ação completa), +2 no ataque e no dano no próximo ataque (impacto corpo a corpo/armas de fogo)",
-    efeitos: [{ nome: "Pressurizada (ativada)", changes: [{ key: "ataque", value: "2" }, { key: "dano", value: "2" }],
+    efeitos: [{ nome: "Pressurizado (ativo)", nomeExato: true, changes: [{ key: "ataque", value: "2" }, { key: "dano", value: "2" }],
       opcional: true, desc: "Marque somente se a arma foi pressurizada com uma ação completa" }] },
 
   "conduite": { nome: "Conduíte", tipo: "melhoria", cats: ["arma"], fonte: "DA p.54",
     beneficio: "O custo do poder Abençoar Arma nesta arma é reduzido em −1 PM",
-    efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo de Abençoar Arma usada nesta arma" }] },
+    escolha: { tipos: ["poder"], sugestao: "Abençoar Arma", rotulo: "Poder Abençoar Arma" },
+    efeitos: [{ poder: true, custo: "-1", restritoAEscolha: true, suspenso: false,
+      desc: "Reduz em −1 PM o custo de Abençoar Arma usada nesta arma" }] },
 
   /* ---------------- Armaduras e Escudos ---------------- */
   "ajustada": { nome: "Ajustada", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "T20 p.164",
@@ -269,7 +280,9 @@ export const MELHORIAS = {
 
   "diligente": { nome: "Diligente", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "DA p.54",
     beneficio: "Reduz o custo do poder Prece de Combate em −1 PM",
-    efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo de Prece de Combate" }] },
+    escolha: { tipos: ["poder"], sugestao: "Prece de Combate", rotulo: "Poder Prece de Combate" },
+    efeitos: [{ poder: true, custo: "-1", restritoAEscolha: true, suspenso: false,
+      desc: "Reduz em −1 PM o custo de Prece de Combate" }] },
 
   "inscrito": { nome: "Inscrito", tipo: "melhoria", cats: ["armadura", "escudo"], fonte: "DA p.54",
     beneficio: "Conta como símbolo sagrado da divindade (+1 em testes de resistência para devotos)",
@@ -286,7 +299,9 @@ export const MELHORIAS = {
 
   "harmonizado-esoterico": { nome: "Harmonizado (Esotérico)", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.165",
     beneficio: "Uma magia escolhida custa −1 PM",
-    efeitos: [{ spell: true, custo: "-1", desc: "Reduz em −1 PM o custo da magia escolhida" }] },
+    escolha: { tipos: ["magia"], rotulo: "Magia escolhida" },
+    efeitos: [{ spell: true, custo: "-1", restritoAEscolha: true, suspenso: false,
+      desc: "Reduz em −1 PM o custo da magia escolhida" }] },
 
   "poderoso": { nome: "Poderoso", tipo: "melhoria", cats: ["esoterico"], fonte: "T20 p.165",
     beneficio: "+1 na CD para resistir às suas magias",
@@ -330,7 +345,10 @@ export const MELHORIAS = {
 
   "discreto": { nome: "Discreto", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.164",
     beneficio: "Ocupa −1 espaço (mínimo 1) e +5 em Ladinagem para ser ocultado", conflita: ["brasonado"],
-    efeitos: [] },
+    efeitos: [{ skill: true, periciaFixa: "ladi", suspenso: true,
+      nome: "Ocultar {objeto} (Discreto): {arma}", nomeExato: true,
+      changes: [{ key: "roll", value: "5" }],
+      desc: "+5 em Ladinagem para ocultar {arma}" }] },
 
   "macabro": { nome: "Macabro", tipo: "melhoria", cats: ["geral"], fonte: "T20 p.165",
     beneficio: "+2 em Intimidação, −2 em Diplomacia",
@@ -345,12 +363,14 @@ export const MELHORIAS = {
 
   "canonico": { nome: "Canônico", tipo: "melhoria", cats: ["geral"], fonte: "DA p.54",
     beneficio: "Se você for devoto da divindade inscrita, +1 na CD de suas habilidades mágicas",
-    efeitos: [{ passivo: true, changes: [{ key: "system.attributes.cd", value: "1" }],
-      desc: "Válido apenas se o usuário for devoto da divindade" }] },
+    efeitos: [{ spell: true, poder: true, suspenso: false, changes: [{ key: "cd", value: "1" }],
+      desc: "+1 na CD de magias e poderes (válido apenas se o usuário for devoto da divindade)" }] },
 
   "devotado": { nome: "Devotado", tipo: "melhoria", cats: ["geral"], fonte: "DA p.54",
     beneficio: "Um poder concedido escolhido custa −1 PM", prereqs: ["inscrito"],
-    efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo do poder concedido escolhido" }] }
+    escolha: { tipos: ["poder"], rotulo: "Poder concedido" },
+    efeitos: [{ poder: true, custo: "-1", restritoAEscolha: true, suspenso: false,
+      desc: "Reduz em −1 PM o custo do poder concedido escolhido" }] }
 };
 
 /* ================================================================== */
@@ -373,7 +393,10 @@ export const ENCANTOS = {
 
   "assassina": { nome: "Assassina", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Dados de ataque furtivo viram d8; 2 PM para rolar novamente resultados 1 no furtivo",
-    efeitos: [{ custo: "2", desc: "Ao usar Ataque Furtivo: dados d8 e rola novamente resultados 1" }] },
+    especial: "assassina",
+    escolha: { tipos: ["poder"], sugestao: "Ataque Furtivo", rotulo: "Ataque Furtivo" },
+    efeitos: [{ nome: "Rolar novamente 1s", custo: "2", gatilho: "assassina",
+      desc: "Com o Ataque Furtivo aplicado, todo resultado 1 nos dados do furtivo é rolado novamente (inclusive os novos 1s)" }] },
 
   "cacadora": { nome: "Caçadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Ignora camuflagem leve/total e cobertura leve; +1 categoria de alcance à distância", efeitos: [] },
@@ -387,17 +410,25 @@ export const ENCANTOS = {
     ] },
 
   "conjuradora": { nome: "Conjuradora", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
-    beneficio: "Guarda uma magia; ao acertar, descarrega-a como ação livre sem custo", efeitos: [] },
+    beneficio: "Guarda uma magia; ao acertar, descarrega-a como ação livre sem custo",
+    especial: "conjuradora", efeitos: [] },
 
   "corrosiva": { nome: "Corrosiva", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de ácido; 1×/rodada, 2 PM: se acertar, a vítima sofre 4d4 de ácido na próxima rodada",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[acido]" }] },
-      { nome: "Corrosão persistente", custo: "2", desc: "1×/rodada: a vítima sofre 4d4 de ácido no início da próxima rodada dela" }
+      { nome: "Corrosão persistente", custo: "2", aplicaModelo: "corrosiva-acido",
+        desc: "1×/rodada: a vítima sofre 4d4 de ácido no início da próxima rodada dela" },
+      { modelo: "corrosiva-acido", nome: "Corrosiva: ácido persistente", nomeExato: true,
+        changes: [{ key: "dano", mode: 0, value: "4d4[acido]" }], modeloDuracao: { rounds: 1 },
+        desc: "Sofre 4d4 de dano de ácido no início do turno" }
     ] },
 
   "dancarina": { nome: "Dançarina", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
-    beneficio: "Ação de movimento + 1 PM: a arma flutua e ataca sozinha em alcance curto (sustentada)", efeitos: [] },
+    beneficio: "Ação de movimento + 1 PM: a arma flutua e ataca sozinha em alcance curto (sustentada)",
+    especial: "dancarina",
+    efeitos: [{ nome: "Ativar", custo: "1", gatilho: "dancarina",
+      desc: "Ação de movimento: a arma flutua e ataca sozinha em alcance curto; o chat pergunta a cada turno se ela continua sustentada" }] },
 
   "defensora": { nome: "Defensora", tipo: "encanto", cats: ["arma"], fonte: "T20 p.335",
     beneficio: "+2 na Defesa",
@@ -414,13 +445,17 @@ export const ENCANTOS = {
 
   "drenante": { nome: "Drenante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Crítico em criatura viva: ela fica fraca e você ganha 2d10 PV temporários",
-    efeitos: [{ condicao: "fraco", opcional: true, desc: "Aplique em um acerto crítico; role 2d10 PV temporários para você" }] },
+    efeitos: [{ condicao: "fraco",
+      rolagemExtra: { titulo: "PV temporários (Drenante)", formula: "2d10[curatpv]", soCritico: true, receber: true },
+      desc: "Aplique em um acerto crítico; no crítico, os 2d10 PV temporários já saem rolados no chat" }] },
 
   "eletrica": { nome: "Elétrica", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de eletricidade; 1×/rodada, 2 PM: raio de 3d8 em outra criatura em alcance curto",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[eletricidade]" }] },
-      { nome: "Raio secundário", custo: "2", desc: "1×/rodada: um raio causa 3d8 de eletricidade em outra criatura em alcance curto" }
+      { nome: "Raio secundário", custo: "2",
+        rolagemExtra: { titulo: "Raio secundário (Elétrica)", formula: "3d8[eletricidade]" },
+        desc: "1×/rodada: um raio causa 3d8 de eletricidade em outra criatura em alcance curto" }
     ] },
 
   "energetica": { nome: "Energética", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
@@ -434,13 +469,15 @@ export const ENCANTOS = {
 
   "excruciante": { nome: "Excruciante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "Criatura viva atingida fica fraca (se já fraca, debilitada)",
-    efeitos: [{ condicao: "fraco", desc: "Aplique à criatura viva atingida (se já fraca, aplique Debilitado)" }] },
+    efeitos: [{ condicao: ["fraco", "debilitado"], desc: "Aplique Fraco à criatura viva atingida (se já fraca, aplique Debilitado)" }] },
 
   "flamejante": { nome: "Flamejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.335",
     beneficio: "+1d6 de fogo; 1×/rodada, 2 PM: em vez do ataque, bola de fogo 6d6 em alcance médio",
     efeitos: [
       { changes: [{ key: "dano", value: "1d6[fogo]" }] },
-      { nome: "Bola de fogo", custo: "2", desc: "Em vez de atacar: 6d6 de fogo em alcance médio (Reflexos CD For/Des reduz à metade)" }
+      { nome: "Bola de fogo", custo: "2",
+        rolagemExtra: { titulo: "Bola de fogo (Flamejante)", formula: "6d6[fogo]" },
+        desc: "Em vez de atacar: 6d6 de fogo em alcance médio (Reflexos CD For/Des reduz à metade)" }
     ] },
 
   "formidavel": { nome: "Formidável", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
@@ -458,8 +495,9 @@ export const ENCANTOS = {
 
   "piedosa": { nome: "Piedosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+1d8 de dano e todo o dano se torna não letal (1 PM para ativar/desativar)",
-    efeitos: [{ custo: "1", changes: [{ key: "dano", value: "1d8" }],
-      desc: "+1d8 e todo o dano é não letal enquanto ativa" }] },
+    especial: "piedosa",
+    efeitos: [{ changes: [{ key: "dano", value: "1d8" }], suspenso: false,
+      desc: "+1d8 de dano e todo o dano é não letal enquanto a Piedosa estiver ativa" }] },
 
   "profana": { nome: "Profana", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+2d8 contra devotos do Bem e criaturas bondosas",
@@ -473,11 +511,11 @@ export const ENCANTOS = {
 
   "sanguinaria": { nome: "Sanguinária", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "Criatura viva atingida fica sangrando (cumulativo)",
-    efeitos: [{ condicao: "sangrando", desc: "Aplique à criatura viva atingida (cumulativo)" }] },
+    especial: "sanguinaria", efeitos: [] },
 
   "trovejante": { nome: "Trovejante", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "Acerto crítico atordoa a vítima por 1 rodada (1×/cena; Fortitude evita)",
-    efeitos: [{ condicao: "atordoado", opcional: true, desc: "Aplique em acerto crítico, 1×/cena (Fortitude CD For/Des evita)" }] },
+    efeitos: [{ condicao: "atordoado", desc: "Aplique em acerto crítico, 1×/cena (Fortitude CD For/Des evita)" }] },
 
   "tumular": { nome: "Tumular", tipo: "encanto", cats: ["arma", "municao"], fonte: "T20 p.336",
     beneficio: "+1d8 de trevas; 1×/rodada, 2 PM: o bônus vira +2d8, mas você perde 1d8 PV",
@@ -505,7 +543,15 @@ export const ENCANTOS = {
     ] },
 
   "anatema": { nome: "Anátema", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
-    beneficio: "Criatura atingida: a CD das habilidades mágicas dela sofre −2 por 1 rodada", efeitos: [] },
+    beneficio: "Criatura atingida: a CD das habilidades mágicas dela sofre −2 por 1 rodada",
+    efeitos: [
+      { aplicaModelo: "anatema-cd", suspenso: false,
+        desc: "Oferece no chat o efeito que reduz em −2 a CD das habilidades mágicas da criatura atingida" },
+      { modelo: "anatema-cd", modeloUso: true, modeloFlags: { spell: true, power: true },
+        nome: "Anátema: −2 na CD", nomeExato: true, changes: [{ key: "cd", value: "-2" }],
+        modeloDuracao: { rounds: 1 }, suspensoNoAlvo: true,
+        desc: "−2 na CD de magias e poderes por 1 rodada" }
+    ] },
 
   "brumosa": { nome: "Brumosa", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
     beneficio: "A cada acerto, você recebe camuflagem leve por 1 rodada", efeitos: [] },
@@ -514,14 +560,21 @@ export const ENCANTOS = {
     beneficio: "+2 em Atuação; 1 PM: você e aliados em alcance curto recebem +1 no ataque por 1 rodada",
     efeitos: [
       { passivo: true, changes: [{ key: "system.pericias.atua.bonus", value: "2" }] },
-      { nome: "Inspirar", custo: "1", changes: [{ key: "ataque", value: "1" }],
-        desc: "Você e aliados em alcance curto recebem +1 no ataque por 1 rodada" }
+      { nome: "Inspirar", custo: "1", aplicaModelo: "cantante-ataque",
+        desc: "Você e aliados em alcance curto recebem +1 no ataque por 1 rodada (aplique pelo chat)" },
+      { modelo: "cantante-ataque", modeloUso: true, modeloFlags: { attack: true },
+        nome: "Cantante: {arma} de {ator}", nomeExato: true, changes: [{ key: "ataque", value: "1" }],
+        modeloDuracao: { rounds: 1 }, desc: "+1 nos testes de ataque por 1 rodada" }
     ] },
 
   "ciclonica": { nome: "Ciclônica", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
     beneficio: "+2 contra manobras; 1×/rodada, 1 PM: rajada de vento em cone de 9m que empurra 3m",
-    efeitos: [{ nome: "Rajada", custo: "1",
-      desc: "Cone de 9m: criaturas são empurradas 3m (Fortitude CD For/Des evita)" }] },
+    efeitos: [
+      { nome: "Rajada", custo: "1",
+        desc: "Cone de 9m: criaturas são empurradas 3m (Fortitude CD For/Des evita)" },
+      { nome: "Resistir a manobras", changes: [{ key: "ataque", value: "2" }],
+        opcional: true, desc: "+2 no teste para resistir a uma manobra de combate" }
+    ] },
 
   "crescente": { nome: "Crescente", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
     beneficio: "2 PM: a arma cresce até o fim do turno — dano +1 passo e alcance +1,5m (só corpo a corpo)",
@@ -544,7 +597,19 @@ export const ENCANTOS = {
 
   "cuidadora": { nome: "Cuidadora", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
     beneficio: "Errou o ataque: +2 na Defesa por 1 rodada; 1×/rodada, 2 PM: RD 10 contra um dano sofrido",
-    efeitos: [{ nome: "Aparar", custo: "2", desc: "1×/rodada, ao sofrer dano: RD 10 contra esse dano" }] },
+    efeitos: [
+      { nome: "Aparar (RD 10)", custo: "2", aplicaNoUsuario: "cuidadora-rd",
+        desc: "1×/rodada, ao sofrer dano: RD 10 contra esse dano (aplicada direto em você; some ao sofrer o próximo dano)" },
+      { modelo: "cuidadora-rd", nome: "Cuidadora: RD 10", nomeExato: true,
+        changes: [{ key: "system.tracos.resistencias.dano.bonus", value: "10" }],
+        modeloDuracao: { rounds: 1 }, expiraAoSofrerDano: true,
+        desc: "RD 10 contra o próximo dano sofrido" },
+      { nome: "Errou o ataque (+2 Defesa)", aplicaModelo: "cuidadora-defesa", suspenso: false,
+        desc: "Se o ataque errar, aplique em você pelo chat: +2 na Defesa por 1 rodada" },
+      { modelo: "cuidadora-defesa", nome: "Cuidadora: +2 na Defesa", nomeExato: true, naoSuspenso: true,
+        changes: [{ key: "system.attributes.defesa.bonus", value: "2" }],
+        modeloDuracao: { rounds: 1 }, desc: "+2 na Defesa por 1 rodada" }
+    ] },
 
   "espreitadora": { nome: "Espreitadora", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
     beneficio: "2 PM ao atacar: deixa o oponente desprevenido (1×/cena por criatura; Vontade evita)",
@@ -553,22 +618,31 @@ export const ENCANTOS = {
 
   "frenetica": { nome: "Frenética", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
     beneficio: "A cada acerto, 1 PM: +1 no ataque e dano com ela até o fim da cena (acumulável até +5)",
-    efeitos: [{ custo: "1", changes: [{ key: "ataque", value: "1" }, { key: "dano", value: "1" }], cena: true,
-      desc: "Acumulável a cada acerto (máx. +5): marque múltiplas vezes conforme as cargas" }] },
+    especial: "frenetica", efeitos: [] },
 
   "gargula": { nome: "Gárgula", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
-    beneficio: "2 PM: convoca uma pequena gárgula parceira (combatente iniciante) até o fim da cena", efeitos: [] },
+    beneficio: "2 PM: convoca uma pequena gárgula parceira (combatente iniciante) até o fim da cena",
+    efeitos: [
+      { nome: "Convocar gárgula", custo: "2", aplicaModelo: "gargula-combatente",
+        desc: "Convoca a gárgula parceira até o fim da cena; aplique o bônus em você pelo chat" },
+      { modelo: "gargula-combatente", modeloUso: true, modeloFlags: { attack: true },
+        nome: "Combatente Iniciante", nomeExato: true, changes: [{ key: "ataque", value: "2" }],
+        modeloDuracao: "cena", desc: "Parceiro combatente iniciante (gárgula): +2 nos testes de ataque até o fim da cena" }
+    ] },
 
   "horrenda": { nome: "Horrenda", tipo: "encanto", cats: ["arma"], fonte: "HA p.256",
     beneficio: "+2 em Intimidação; custo de habilidades de medo −1 PM",
+    escolha: { tipos: ["poder", "magia"], multipla: true, rotulo: "Habilidades de medo" },
     efeitos: [
       { passivo: true, changes: [{ key: "system.pericias.inti.bonus", value: "2" }] },
-      { custo: "-1", nome: "Medo", desc: "Reduz em −1 PM o custo de habilidades de medo" }
+      { poder: true, spell: true, custo: "-1", nome: "Medo", restritoAEscolha: true, suspenso: false,
+        desc: "Reduz em −1 PM o custo das habilidades de medo escolhidas" }
     ] },
 
   "infestada": { nome: "Infestada", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
     beneficio: "A cada acerto, 2 PM: enxame causa 2d6 de veneno e deixa enjoado por 1d4 rodadas",
-    efeitos: [{ changes: [{ key: "dano", value: "2d6" }], condicao: "enjoado", custo: "2",
+    efeitos: [{ condicao: "enjoado", custo: "2",
+      rolagemExtra: { titulo: "Enxame (Infestada)", formula: "2d6[perda]" },
       desc: "O alvo perde 2d6 PV por veneno e fica enjoado por 1d4 rodadas (Fortitude evita a condição)" }] },
 
   "manafaga": { nome: "Manáfaga", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
@@ -582,8 +656,8 @@ export const ENCANTOS = {
 
   "rebote": { nome: "Rebote", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.256",
     beneficio: "Erro acumula carga (máx. 3); acerto gasta todas: +1d6 por carga",
-    efeitos: [{ nome: "Cargas", changes: [{ key: "dano", value: "1d6" }],
-      opcional: true, desc: "Marque uma vez por carga acumulada (máx. 3); as cargas são gastas no acerto" }] },
+    efeitos: [{ nome: "Cargas", changes: [{ key: "dano", value: "1d6" }], aumenta: true,
+      opcional: true, desc: "Aplique uma vez por carga acumulada (máx. 3); as cargas são gastas no acerto" }] },
 
   "reflexiva": { nome: "Reflexiva", tipo: "encanto", cats: ["arma"], fonte: "HA p.257",
     beneficio: "1×/rodada, ao ser alvo de magia, gaste PM igual ao círculo para refleti-la",
@@ -591,8 +665,7 @@ export const ENCANTOS = {
 
   "ressonante": { nome: "Ressonante", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.257",
     beneficio: "Ao acertar, 2 PM: onda de choque psíquica em outra criatura em alcance curto (metade do dano)",
-    efeitos: [{ nome: "Onda de choque", custo: "2",
-      desc: "Compare o ataque com a Defesa de outra criatura em alcance curto; se acertar, dano psíquico igual à metade do dano causado" }] },
+    especial: "ressonante", efeitos: [] },
 
   "sepulcral": { nome: "Sepulcral", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.257",
     beneficio: "Junto do efeito de Tumular: a criatura atingida não recupera PV por 1d4 rodadas",
@@ -600,7 +673,12 @@ export const ENCANTOS = {
 
   "sombria": { nome: "Sombria", tipo: "encanto", cats: ["arma"], fonte: "HA p.257",
     beneficio: "+2 em Furtividade; lança Escuridão (se já pode, custo −1 PM)",
-    efeitos: [{ passivo: true, changes: [{ key: "system.pericias.furt.bonus", value: "2" }] }] },
+    escolha: { tipos: ["magia"], sugestao: "Escuridão", rotulo: "Magia Escuridão" },
+    efeitos: [
+      { passivo: true, changes: [{ key: "system.pericias.furt.bonus", value: "2" }] },
+      { spell: true, custo: "-1", nome: "Escuridão", restritoAEscolha: true, suspenso: false,
+        desc: "Reduz em −1 PM o custo da magia escolhida" }
+    ] },
 
   "vampirica": { nome: "Vampírica", tipo: "encanto", cats: ["arma", "municao"], fonte: "HA p.257",
     beneficio: "1 PM ao atacar: +2d6 de trevas e você recupera PV igual ao dano de trevas causado",
@@ -614,7 +692,9 @@ export const ENCANTOS = {
       desc: "+5 em testes de resistência contra magia (o bônus geral inclui outras fontes — ajuste se necessário)" }] },
 
   "abencoado": { nome: "Abençoado", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
-    beneficio: "Redução de trevas 10 e +5 em resistências contra necromancia", efeitos: [] },
+    beneficio: "Redução de trevas 10 e +5 em resistências contra necromancia",
+    nota: "O +5 contra necromancia é situacional; aplique na hora",
+    efeitos: [{ passivo: true, changes: [RD("trevas", 10)], desc: "Redução de trevas 10" }] },
 
   "acrobatico": { nome: "Acrobático", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.337",
     beneficio: "+5 em Acrobacia e ignora a penalidade de armadura nesses testes",
@@ -664,7 +744,10 @@ export const ENCANTOS = {
 
   "gelido": { nome: "Gélido", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de frio 10; ação de movimento + 2 PM: 10 PV temporários até o fim da cena",
-    efeitos: [{ nome: "Cobertura de gelo", custo: "2", desc: "Recebe 10 PV temporários" }] },
+    efeitos: [
+      { passivo: true, changes: [RD("frio", 10)], desc: "Redução de frio 10 (sempre ativa)" },
+      { nome: "Cobertura de gelo", custo: "2", desc: "Recebe 10 PV temporários" }
+    ] },
 
   "guardiao": { nome: "Guardião", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+4 na Defesa (substitui Defensor — bônus não acumulam)",
@@ -681,14 +764,23 @@ export const ENCANTOS = {
 
   "incandescente": { nome: "Incandescente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de fogo 10; ação de movimento + 2 PM: 1d6 de fogo em adjacentes no início dos seus turnos",
-    efeitos: [{ nome: "Labaredas", custo: "2", cena: true,
-      desc: "No início de cada turno seu, criaturas adjacentes sofrem 1d6 de fogo" }] },
+    efeitos: [
+      { passivo: true, changes: [RD("fogo", 10)], desc: "Redução de fogo 10 (sempre ativa)" },
+      { nome: "Labaredas", custo: "2", cena: true,
+        desc: "No início de cada turno seu, criaturas adjacentes sofrem 1d6 de fogo" }
+    ] },
 
   "invulneravel": { nome: "Invulnerável", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
-    beneficio: "RD 2 (escudos) ou RD 5 (armaduras)", efeitos: [] },
+    beneficio: "RD 2 (escudos) ou RD 5 (armaduras)",
+    efeitos: [
+      { soCats: ["escudo"], passivo: true, changes: [RD("dano", 2)], desc: "RD 2" },
+      { soCats: ["armadura"], passivo: true, changes: [RD("dano", 5)], desc: "RD 5" }
+    ] },
 
   "opaco": { nome: "Opaco", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
-    beneficio: "Redução de ácido, eletricidade, fogo e frio 10", efeitos: [] },
+    beneficio: "Redução de ácido, eletricidade, fogo e frio 10",
+    efeitos: [{ passivo: true, changes: [RD("acido", 10), RD("eletricidade", 10), RD("fogo", 10), RD("frio", 10)],
+      desc: "Redução de ácido, eletricidade, fogo e frio 10" }] },
 
   "protetor": { nome: "Protetor", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "+2 em testes de resistência",
@@ -699,8 +791,11 @@ export const ENCANTOS = {
 
   "relampejante": { nome: "Relampejante", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Redução de eletricidade 10; ação de movimento + 2 PM: quem o atacar corpo a corpo sofre 2d6 de eletricidade",
-    efeitos: [{ nome: "Arcos voltaicos", custo: "2", cena: true,
-      desc: "Quem o atacar corpo a corpo sofre 2d6 de eletricidade até o fim da cena" }] },
+    efeitos: [
+      { passivo: true, changes: [RD("eletricidade", 10)], desc: "Redução de eletricidade 10 (sempre ativa)" },
+      { nome: "Arcos voltaicos", custo: "2", cena: true,
+        desc: "Quem o atacar corpo a corpo sofre 2d6 de eletricidade até o fim da cena" }
+    ] },
 
   "reluzente": { nome: "Reluzente", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "T20 p.338",
     beneficio: "Ação de movimento + 2 PM: clarão cega inimigos em alcance curto por 1 rodada (Reflexos CD Car evita)",
@@ -717,7 +812,10 @@ export const ENCANTOS = {
   /* ---------------- Armaduras e Escudos — HA ---------------- */
   "abissal": { nome: "Abissal", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "HA p.259",
     beneficio: "Redução de ácido e fogo 10; 1×/rodada, 1 PM: 2d6 de ácido ou fogo em criatura adjacente",
-    efeitos: [{ nome: "Chamas abissais", custo: "1", desc: "2d6 de ácido ou fogo em uma criatura adjacente" }] },
+    efeitos: [
+      { passivo: true, changes: [RD("acido", 10), RD("fogo", 10)], desc: "Redução de ácido e fogo 10 (sempre ativa)" },
+      { nome: "Chamas abissais", custo: "1", desc: "2d6 de ácido ou fogo em uma criatura adjacente" }
+    ] },
 
   "ancorada": { nome: "Ancorada", tipo: "encanto", cats: ["armadura"], fonte: "HA p.259",
     beneficio: "+5 em Atletismo para escalar; 1 PM: deslocamento de escalada 12m (sustentado)", efeitos: [] },
@@ -736,7 +834,7 @@ export const ENCANTOS = {
     ] }] },
 
   "densa": { nome: "Densa", tipo: "encanto", cats: ["armadura"], fonte: "HA p.259",
-    beneficio: "Deslocamento de inimigos em alcance curto −3m; 2 PM: abalados e lentos por 1d4 rodadas",
+    beneficio: "Deslocamento de inimigos em alcance curto −3m; 2 PM: abalados e lentos por 1d4 rodadas (CD For ou Des evita)",
     efeitos: [{ condicao: ["abalado", "lento"], custo: "2",
       desc: "Inimigos em alcance curto ficam abalados e lentos por 1d4 rodadas (CD For/Des evita)" }] },
 
@@ -747,7 +845,9 @@ export const ENCANTOS = {
     beneficio: "+5 contra derrubar e empurrar; 2 PM: +5 contra outro efeito de movimento", efeitos: [] },
 
   "esmerico": { nome: "Esmérico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "HA p.259",
-    beneficio: "Redução de ácido 10, resistência a veneno +5; 1 PM: estende a proteção a aliados próximos", efeitos: [] },
+    beneficio: "Redução de ácido 10, resistência a veneno +5; 1 PM: estende a proteção a aliados próximos",
+    nota: "Resistência a veneno e a extensão aos aliados ficam por sua conta",
+    efeitos: [{ passivo: true, changes: [RD("acido", 10)], desc: "Redução de ácido 10" }] },
 
   "estigio": { nome: "Estígio", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "HA p.259",
     beneficio: "1×/cena, se reduzido a 0 PV, 5 PM para ficar com 1 PV", prereqs: ["abencoado"], efeitos: [] },
@@ -756,7 +856,9 @@ export const ENCANTOS = {
     beneficio: "1×/cena, 3 PM: incorpóreo por 1 rodada", efeitos: [] },
 
   "geomantico": { nome: "Geomântico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "HA p.260",
-    beneficio: "RD 10 contra impacto e fortificação 25%; lança Controlar Terra", efeitos: [] },
+    beneficio: "RD 10/impacto e fortificação 25%; lança Controlar Terra",
+    nota: "Fortificação e a magia ficam por sua conta",
+    efeitos: [{ passivo: true, changes: [RD("impacto", 10)], desc: "Redução de impacto 10" }] },
 
   "ligeira": { nome: "Ligeira", tipo: "encanto", cats: ["armadura"], fonte: "HA p.260",
     beneficio: "Pode ser vestida/removida como ação livre", efeitos: [] },
@@ -826,7 +928,8 @@ export const ENCANTOS = {
 
   "frugal": { nome: "Frugal", tipo: "encanto", cats: ["esoterico"], fonte: "HA p.261",
     beneficio: "Magia de resistência contra inimigos: −2 na CD e −2 PM",
-    efeitos: [{ spell: true, custo: "-2", desc: "−2 na CD da magia e −2 PM no custo" }] },
+    efeitos: [{ spell: true, custo: "-2", changes: [{ key: "cd", value: "-2" }],
+      desc: "−2 na CD da magia e −2 PM no custo" }] },
 
   "glacial": { nome: "Glacial", tipo: "encanto", cats: ["esoterico"], fonte: "HA p.261",
     beneficio: "Magias de frio: +1 dado do mesmo tipo e deixam vulnerável por 1 rodada",
@@ -919,80 +1022,267 @@ export const ENCANTOS = {
 /* precos por categoria de item; 0 = raro (não vendido; edite o custo)*/
 /* ================================================================== */
 
+/**
+ * Cada material tem uma VARIANTE por categoria de item (arma, armadura
+ * leve, armadura pesada, escudo, esotérico), com benefício e efeitos
+ * próprios. A variante é escolhida automaticamente pela categoria do
+ * item e pode ser trocada na aba; o material só aparece na lista para
+ * itens que tenham uma variante possível. Efeitos com `variantes` só
+ * valem nas variantes listadas (sem a chave, valem em todas).
+ */
 export const MATERIAIS = {
   "aco-rubi": { nome: "Aço-Rubi", fonte: "T20 p.165",
     precos: { arma: 6000, armaduraLeve: 3000, armaduraPesada: 6000, escudo: 3000, esoterico: 6000 },
     beneficio: "Arma: ignora 10 de RD e a imunidade a crítico de lefeu. Armadura/escudo: chance de ignorar dano extra de crítico/furtivo. Esotérico: magias ignoram 10 de RD de lefeu",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "ignoraRD", value: "10" }] }] },
+    variantes: {
+      arma: { beneficio: "Ignora 10 de RD e a imunidade a acertos críticos de lefeu" },
+      armaduraLeve: { beneficio: "Chance de ignorar o dano extra de acertos críticos e ataques furtivos" },
+      armaduraPesada: { beneficio: "Chance de ignorar o dano extra de acertos críticos e ataques furtivos" },
+      escudo: { beneficio: "Chance de ignorar o dano extra de acertos críticos e ataques furtivos" },
+      esoterico: { beneficio: "Suas magias ignoram 10 de RD de lefeu" }
+    },
+    efeitos: [{ variantes: ["arma"], changes: [{ key: "ignoraRD", value: "10" }] }] },
 
   "adamante": { nome: "Adamante", fonte: "T20 p.165",
     precos: { arma: 3000, armaduraLeve: 6000, armaduraPesada: 18000, escudo: 6000, esoterico: 3000 },
     beneficio: "Arma: dano +1 passo. Armadura/escudo: RD 2 (leves/escudos) ou 5 (pesadas). Esotérico: +1 PM para rerrolar 1s no dano",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "passos", value: "1", mode: 0 }] }] },
+    variantes: {
+      arma: { beneficio: "Dano +1 passo" },
+      armaduraLeve: { beneficio: "RD 2" },
+      armaduraPesada: { beneficio: "RD 5" },
+      escudo: { beneficio: "RD 2" },
+      esoterico: { beneficio: "+1 PM ao lançar magia para rolar novamente os 1s do dano" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "passos", value: "1", mode: 0 }] },
+      { variantes: ["armaduraLeve", "escudo"], passivo: true, changes: [RD("dano", 2)] },
+      { variantes: ["armaduraPesada"], passivo: true, changes: [RD("dano", 5)] }
+    ] },
 
   "gelo-eterno": { nome: "Gelo Eterno", fonte: "T20 p.165",
     precos: { arma: 600, armaduraLeve: 1500, armaduraPesada: 3000, escudo: 1500, esoterico: 3000 },
     beneficio: "Arma: +2 de dano por frio. Armadura/escudo: redução de fogo 5/10. Esotérico: rerrola 1s no dano de frio",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "2[frio]" }] }] },
+    variantes: {
+      arma: { beneficio: "+2 de dano de frio" },
+      armaduraLeve: { beneficio: "Redução de fogo 5" },
+      armaduraPesada: { beneficio: "Redução de fogo 10" },
+      escudo: { beneficio: "Redução de fogo 5" },
+      esoterico: { beneficio: "Rola novamente os 1s no dano de frio das suas magias" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "dano", value: "2[frio]" }] },
+      { variantes: ["armaduraLeve", "escudo"], passivo: true, changes: [RD("fogo", 5)] },
+      { variantes: ["armaduraPesada"], passivo: true, changes: [RD("fogo", 10)] }
+    ] },
 
   "madeira-tollon": { nome: "Madeira Tollon", fonte: "T20 p.166",
     precos: { arma: 1500, escudo: 1500, esoterico: 1500 },
     beneficio: "Arma: conta como mágica para RD; habilidades de ataque custam −1 PM. Escudo/esotérico: resistência a magia +2",
-    efeitos: [{ soCats: ["arma", "municao"], custo: "-1", desc: "Reduz em −1 PM habilidades de ataque/agredir" }] },
+    variantes: {
+      arma: { beneficio: "Conta como mágica para RD; habilidades de ataque custam −1 PM (aplicável mais de uma vez)" },
+      escudo: { beneficio: "Resistência a magia +2" },
+      esoterico: { beneficio: "Resistência a magia +2" }
+    },
+    efeitos: [
+      { variantes: ["arma"], custo: "-1", aumenta: true,
+        desc: "Reduz em −1 PM cada habilidade de ataque usada junto (aplique uma vez por habilidade)" },
+      // Mesmo caminho do Abascanto para "resistência a magia"
+      { variantes: ["escudo", "esoterico"], passivo: true,
+        changes: [{ key: "system.modificadores.pericias.resistencia", value: "+2" }],
+        desc: "+2 em testes de resistência contra magia (o bônus geral inclui outras fontes — ajuste se necessário)" }
+    ] },
 
   "materia-vermelha": { nome: "Matéria Vermelha", fonte: "T20 p.166",
     precos: { arma: 1500, armaduraLeve: 6000, armaduraPesada: 18000, escudo: 6000, esoterico: 3000 },
     beneficio: "Arma: +1d6 de dano, mas você perde 1 PV a cada acerto (lefou imunes). Impõe −2 em perícias de Carisma (exceto Intimidação)",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "1d6" }],
-      opcional: true, desc: "Você perde 1 PV a cada acerto" }] },
+    variantes: {
+      arma: { beneficio: "+1d6 de dano, mas você perde 1 PV a cada acerto (lefou imunes). −2 em perícias de Carisma (exceto Intimidação)" },
+      armaduraLeve: { beneficio: "−2 em perícias de Carisma (exceto Intimidação)" },
+      armaduraPesada: { beneficio: "−2 em perícias de Carisma (exceto Intimidação)" },
+      escudo: { beneficio: "−2 em perícias de Carisma (exceto Intimidação)" },
+      esoterico: { beneficio: "−2 em perícias de Carisma (exceto Intimidação)" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "dano", value: "1d6" }], desc: "Você perde 1 PV a cada acerto" },
+      { passivo: true, nome: "Penalidade de Carisma",
+        // Um só modificador de Carisma cobre todas as perícias do atributo (e
+        // as que vierem de homebrew); a Intimidação, que fica de fora da
+        // penalidade, recebe +2 para zerar a conta.
+        changes: [
+          { key: "system.modificadores.pericias.atr.car", mode: 2, value: "-2" },
+          { key: "system.pericias.inti.bonus", mode: 2, value: "2" }
+        ],
+        desc: "−2 em perícias de Carisma (exceto Intimidação)" }
+    ] },
 
   "mitral": { nome: "Mitral", fonte: "T20 p.166",
     precos: { arma: 1500, armaduraLeve: 1500, armaduraPesada: 12000, escudo: 1500, esoterico: 3000 },
     beneficio: "Ocupa −1 espaço. Arma: +1 na margem de ameaça. Armadura/escudo: penalidade −2 (pesadas aplicam até 2 de Des). Esotérico: +2 PM para +2 na CD",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "criticoM", value: "-1" }] }] },
+    variantes: {
+      arma: { beneficio: "Ocupa −1 espaço; +1 na margem de ameaça" },
+      armaduraLeve: { beneficio: "Ocupa −1 espaço; penalidade de armadura −2" },
+      armaduraPesada: { beneficio: "Ocupa −1 espaço; penalidade de armadura −2 e aplica até 2 de Destreza na Defesa" },
+      escudo: { beneficio: "Ocupa −1 espaço; penalidade de armadura −2" },
+      esoterico: { beneficio: "Ocupa −1 espaço; +2 PM ao lançar magia para +2 na CD" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "criticoM", value: "-1" }] },
+      { variantes: ["armaduraLeve", "armaduraPesada", "escudo"], passivo: true,
+        changes: [{ key: "system.attributes.defesa.pda", value: "2" }], desc: "Reduz a penalidade de armadura em 2" },
+      { variantes: ["esoterico"], spell: true, custo: "2", opcional: true,
+        changes: [{ key: "cd", value: "2" }], desc: "+2 PM ao lançar a magia para +2 na CD" }
+    ] },
 
   "casco-de-monstro": { nome: "Casco de Monstro", fonte: "AA p.399",
     precos: { arma: 750, armaduraLeve: 750, armaduraPesada: 6000, escudo: 750, esoterico: 6000 },
     beneficio: "Arma: conta como primitiva para Armamento da Natureza. Armadura/escudo: penalidade −1. Esotérico: RD 5 após lançar magia",
-    efeitos: [] },
+    variantes: {
+      arma: { beneficio: "Conta como arma primitiva para Armamento da Natureza" },
+      armaduraLeve: { beneficio: "Penalidade de armadura −1" },
+      armaduraPesada: { beneficio: "Penalidade de armadura −1" },
+      escudo: { beneficio: "Penalidade de armadura −1" },
+      esoterico: { beneficio: "RD 5 após lançar uma magia" }
+    },
+    efeitos: [{ variantes: ["armaduraLeve", "armaduraPesada", "escudo"], passivo: true,
+      changes: [{ key: "system.attributes.defesa.pda", value: "1" }], desc: "Reduz a penalidade de armadura em 1" }] },
 
   "lanajuste": { nome: "Lanajuste", fonte: "AA p.400",
     precos: { arma: 3000, armaduraLeve: 1500, armaduraPesada: 600, escudo: 3000, esoterico: 1500 },
     beneficio: "Arma: ignora penalidades de combate submerso. Armadura/escudo: redução de corte 5/10. Esotérico: rerrola 1s em dano de corte",
-    efeitos: [] },
+    variantes: {
+      arma: { beneficio: "Ignora as penalidades de combate submerso" },
+      armaduraLeve: { beneficio: "Redução de corte 5" },
+      armaduraPesada: { beneficio: "Redução de corte 10" },
+      escudo: { beneficio: "Redução de corte 5" },
+      esoterico: { beneficio: "Rola novamente os 1s no dano de corte das suas magias" }
+    },
+    efeitos: [
+      { variantes: ["armaduraLeve", "escudo"], passivo: true, changes: [RD("corte", 5)] },
+      { variantes: ["armaduraPesada"], passivo: true, changes: [RD("corte", 10)] }
+    ] },
 
   "prata": { nome: "Prata", fonte: "AA p.400",
     precos: { arma: 3000, armaduraLeve: 1500, armaduraPesada: 600, escudo: 400, esoterico: 1500 },
     beneficio: "Arma: +2 de dano contra espíritos e mortos-vivos, considerada mágica contra eles. Pode combinar com outro material",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "2" }],
+    variantes: {
+      arma: { beneficio: "+2 de dano contra espíritos e mortos-vivos, considerada mágica contra eles. Pode combinar com outro material" },
+      armaduraLeve: { beneficio: "Item de prata (pode combinar com outro material)" },
+      armaduraPesada: { beneficio: "Item de prata (pode combinar com outro material)" },
+      escudo: { beneficio: "Item de prata (pode combinar com outro material)" },
+      esoterico: { beneficio: "Item de prata (pode combinar com outro material)" }
+    },
+    efeitos: [{ variantes: ["arma"], changes: [{ key: "dano", value: "2" }],
       opcional: true, desc: "Use somente contra espíritos e mortos-vivos" }] },
 
   "couraca-de-kaiju": { nome: "Couraça de Kaiju", fonte: "AA p.400",
     precos: {}, raro: true,
     beneficio: "Arma: dano +1 passo; 2 PM ignora efeitos que reduzem dano. Armadura: RD 10/20 contra tudo (mágico)",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "passos", value: "1", mode: 0 }] }] },
+    variantes: {
+      arma: { beneficio: "Dano +1 passo; 2 PM: o ataque ignora efeitos que reduzem dano" },
+      armaduraLeve: { beneficio: "RD 10 contra tudo (exceto dano mágico)" },
+      armaduraPesada: { beneficio: "RD 20 contra tudo (exceto dano mágico)" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "passos", value: "1", mode: 0 }] },
+      { variantes: ["arma"], nome: "Ignorar redução de dano", custo: "2",
+        changes: [{ key: "ignoraRD", value: "999" }],
+        desc: "O ataque ignora efeitos que reduzem dano" },
+      { variantes: ["armaduraLeve"], passivo: true, changes: [RD("dano", 10)] },
+      { variantes: ["armaduraPesada"], passivo: true, changes: [RD("dano", 20)] }
+    ] },
 
   "couro-de-bulette": { nome: "Couro de Bulette", fonte: "AA p.400",
     precos: {}, raro: true,
     beneficio: "Armadura: deslocamento de escavação e redução de ácido 5/10. Esotérico: rerrola 1s em dano de ácido",
-    efeitos: [] },
+    variantes: {
+      armaduraLeve: { beneficio: "Deslocamento de escavação e redução de ácido 5" },
+      armaduraPesada: { beneficio: "Deslocamento de escavação e redução de ácido 10" },
+      esoterico: { beneficio: "Rola novamente os 1s no dano de ácido das suas magias" }
+    },
+    efeitos: [
+      { variantes: ["armaduraLeve"], passivo: true, changes: [RD("acido", 5)] },
+      { variantes: ["armaduraPesada"], passivo: true, changes: [RD("acido", 10)] }
+    ] },
 
   "cristal-de-sol": { nome: "Cristal de Sol", fonte: "AA p.400",
     precos: {}, raro: true,
     beneficio: "Arma (corte/perfuração): +2 de dano por fogo. Armadura: resistência a frio com dois dados. Esotérico: 1 PM deixa em chamas",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "2[fogo]" }] }] },
+    variantes: {
+      arma: { beneficio: "+2 de dano de fogo (armas de corte ou perfuração)" },
+      armaduraLeve: { beneficio: "Testes de resistência contra frio com dois dados" },
+      armaduraPesada: { beneficio: "Testes de resistência contra frio com dois dados" },
+      esoterico: { beneficio: "+1 PM ao lançar magia de fogo: os alvos ficam em chamas" }
+    },
+    efeitos: [
+      { variantes: ["arma"], changes: [{ key: "dano", value: "2[fogo]" }] },
+      // Mesmo formato da Inflamável (esotérico): condição anexada ao uso da magia
+      { variantes: ["esoterico"], spell: true, custo: "1", opcional: true, condicao: "em-chamas",
+        desc: "Use em magias de fogo: +1 PM e os alvos ficam em chamas" }
+    ] },
 
   "pena-de-kraken": { nome: "Pena de Kraken", fonte: "AA p.400",
     precos: {}, raro: true,
     beneficio: "Arma: acerto crítico aumenta o dano em dois passos (antes de multiplicar). Armadura: atacantes que erram perdem 5/10 PV",
-    efeitos: [] },
+    variantes: {
+      arma: { beneficio: "Acerto crítico aumenta o dano da arma em dois passos (antes de multiplicar)", especial: "kraken" },
+      armaduraLeve: { beneficio: "Quem erra um ataque corpo a corpo contra você perde 5 PV" },
+      armaduraPesada: { beneficio: "Quem erra um ataque corpo a corpo contra você perde 10 PV" }
+    },
+    especial: "kraken", efeitos: [] },
 
   "quitina-razza": { nome: "Quitina Razza", fonte: "AA p.401",
     precos: {}, raro: true,
     beneficio: "Arma: dados máximos do dano básico explodem (role um dado extra a cada máximo). Armadura: +Percepção e Defesa",
-    efeitos: [{ soCats: ["arma", "municao"], changes: [{ key: "dano", value: "x", mode: 0 }],
+    variantes: {
+      arma: { beneficio: "Os dados do dano básico explodem nos resultados máximos" },
+      armaduraLeve: { beneficio: "Bônus em Percepção e na Defesa" },
+      armaduraPesada: { beneficio: "Bônus em Percepção e na Defesa" }
+    },
+    efeitos: [{ variantes: ["arma"], changes: [{ key: "dano", value: "x", mode: 0 }],
       desc: "O dado de dano básico explode em resultados máximos" }] }
 };
+
+/* ------------------------------------------------------------------ */
+/* Variantes de material                                              */
+/* ------------------------------------------------------------------ */
+
+export const VARIANTES = {
+  arma: "Arma",
+  armaduraLeve: "Armadura leve",
+  armaduraPesada: "Armadura pesada",
+  escudo: "Escudo",
+  esoterico: "Esotérico"
+};
+
+/**
+ * Variantes possíveis de um material. Homebrews antigos (sem
+ * `variantes`) valem nas categorias em que têm preço.
+ */
+export function variantesDoMaterial(def) {
+  if (def?.variantes) return Object.keys(def.variantes).filter(v => VARIANTES[v]);
+  const comPreco = Object.keys(def?.precos ?? {}).filter(v => VARIANTES[v]);
+  return comPreco.length ? comPreco : Object.keys(VARIANTES);
+}
+
+/** Variante escolhida automaticamente pela categoria do item. */
+export function varianteInicial(def, item) {
+  const possiveis = variantesDoMaterial(def);
+  const cat = categoriaMaterialDoItem(item);
+  return possiveis.includes(cat) ? cat : possiveis[0];
+}
+
+/** O material tem variante para a categoria deste item? */
+export function materialServeNoItem(def, item) {
+  return variantesDoMaterial(def).includes(categoriaMaterialDoItem(item));
+}
+
+export function beneficioDaVariante(def, variante) {
+  return def?.variantes?.[variante]?.beneficio ?? def?.beneficio ?? "";
+}
+
+export function precoDaVariante(def, variante) {
+  return Number(def?.precos?.[variante]) || 0;
+}
 
 /* ================================================================== */
 /* Ícones                                                             */
@@ -1016,16 +1306,69 @@ export const ICONES = {
  * @param {Item} item          o item que recebe (para efeitos especiais)
  * @param {object} opcoes      { pericia: "luta" } — escolhas do usuário
  */
+/** Valores dos marcadores {arma}, {ator} e {objeto} nos nomes dos efeitos. */
+function contextoDeNomes(item) {
+  return {
+    arma: item.name,
+    ator: item.actor?.name ?? "seu portador",
+    objeto: item.type === "arma" ? "arma" : "item"
+  };
+}
+
+/** Id da condição no sistema ("em-chamas" do catálogo → "emchamas"). */
+function idCondicao(c) {
+  return String(c).replace(/-/g, "");
+}
+
+/** Rótulo de uma perícia pela chave (é o que "Itens específicos" compara). */
+function rotuloPericia(chave) {
+  return CONFIG.T20?.pericias?.[chave]?.label ?? chave;
+}
+
+/**
+ * Monta os ActiveEffects de uma entrada do catálogo.
+ * @param {string} key         chave da entrada
+ * @param {object} entrada     definição (catálogo ou homebrew)
+ * @param {string} entradaId   id da instância no item
+ * @param {Item} item          o item que recebe (para efeitos especiais)
+ * @param {object} opcoes      escolhas do usuário para esta instância:
+ *   { pericia, alvos: [nomes de poderes/magias], variante }
+ *
+ * Campos extras do formato de efeito (além dos do cabeçalho):
+ *   poder: true            → efeito de uso nos poderes do ator
+ *   restritoAEscolha       → só vale nos poderes/magias escolhidos na aba
+ *   periciaFixa: "ladi"    → efeito de perícia restrito a essa perícia
+ *   suspenso: bool         → força o estado inicial (marcado/desmarcado)
+ *   nomeExato              → usa `nome` sem o prefixo da entrada
+ *   aumenta                → aplicável várias vezes no diálogo de uso
+ *   modelo: "id"           → efeito oferecido no chat para aplicar (fica
+ *                            suspenso no item, como o sistema exige)
+ *   aplicaModelo: "id"     → ao usar, oferece o modelo no cartão do chat
+ *   aplicaNoUsuario: "id"  → ao usar, aplica o modelo direto no usuário
+ *   rolagemExtra           → rola uma fórmula à parte no cartão do ataque
+ *   gatilho                → dispara uma automação ao ser usado
+ */
 export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
   const lista = [];
   const catsItem = categoriasDoItem(item);
+  const ctx = contextoDeNomes(item);
+  const efeitos = entrada.efeitos ?? [];
+  const img = ICONES[entrada.tipo] ?? ICONES.melhoria;
 
-  for (const ef of entrada.efeitos ?? []) {
+  const nomeDe = (ef) => {
+    const proprio = ef.nome ? preencherMarcadores(ef.nome, ctx) : "";
+    if (!proprio) return entrada.nome;
+    return ef.nomeExato ? proprio : `${entrada.nome} — ${proprio}`;
+  };
+
+  for (const ef of efeitos) {
     if (ef.soCats && !ef.soCats.some(c => catsItem.includes(c))) continue;
+    if (ef.variantes && opcoes.variante && !ef.variantes.includes(opcoes.variante)) continue;
+    // Restrito a poderes/magias escolhidos: sem escolha, o efeito valeria
+    // para TODOS (o sistema trata "Itens específicos" vazio como "todos").
+    if (ef.restritoAEscolha && !opcoes.alvos?.length) continue;
 
-    const nome = ef.nome ? `${entrada.nome} — ${ef.nome}` : entrada.nome;
-    const passivo = !!ef.passivo;
-    const skill = !!ef.skill;
+    const nome = nomeDe(ef);
 
     // Condições viram changes { key: "condicao", mode: CUSTOM } no mesmo
     // efeito de uso — o sistema aplica a condição oficial pelo chat.
@@ -1034,62 +1377,138 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
       ...(ef.changes ?? []).map(c => ({
         key: c.key, value: String(c.value), mode: c.mode ?? 2, priority: 0
       })),
-      ...condicoes.map(c => ({ key: "condicao", value: c, mode: 0, priority: 0 }))
+      ...condicoes.map(c => ({ key: "condicao", value: idCondicao(c), mode: 0, priority: 0 }))
     ];
+
+    // Gatilho de modelo: o sistema puxa, pelo nome, o efeito suspenso do
+    // item para os botões de "aplicar efeito" do cartão do chat.
+    if (ef.aplicaModelo) {
+      const modelo = efeitos.find(m => m.modelo === ef.aplicaModelo);
+      if (modelo) changes.push({ key: "efeito", value: nomeDe(modelo), mode: 0, priority: 0 });
+    }
 
     const nomesCond = condicoes.map(c => CONDICOES[c] ?? c).join(", ");
     const descCond = nomesCond ? ` Aplica: ${nomesCond}.` : "";
+    const description = `<p>${preencherMarcadores(ef.desc ?? entrada.beneficio, ctx)}.${descCond}</p><p><em>${entrada.nome} (${entrada.fonte ?? "homebrew"})</em></p>`;
 
-    /* Efeitos passivos, de perícia (skill), de magia (spell) e riders de
-     * ataque (ef.ataque: aplicam-se aos ataques do usuário, ex.: uma
-     * armadura que adiciona dano de ácido às armas) precisam viver NO
+    const extras = {};
+    if (ef.gatilho) extras.gatilho = ef.gatilho;
+    if (ef.rolagemExtra) extras.rolagemExtra = ef.rolagemExtra;
+    if (ef.aplicaNoUsuario) extras.aplicaNoUsuario = ef.aplicaNoUsuario;
+    if (temMarcadores(ef.nome) || (ef.aplicaModelo && temMarcadores(efeitos.find(m => m.modelo === ef.aplicaModelo)?.nome))) {
+      extras.nomeDinamico = true;
+    }
+
+    /* Modelo: o efeito que o cartão do chat oferece para aplicar em
+     * alguém. O sistema só o encontra se estiver SUSPENSO no item (e, se
+     * for de uso, com duração de cena). A duração, o estado e as mudanças
+     * reais da cópia são acertados ao montar o cartão (rolagem.mjs), pois
+     * o sistema mistura nelas as mudanças de outros efeitos do ataque. */
+    if (ef.modelo) {
+      const uso = !!ef.modeloUso;
+      const mf = ef.modeloFlags ?? {};
+      const duracao = ef.modeloDuracao ?? { rounds: 1 };
+      /* `naoSuspenso`: o modelo fica destravado no item sem virar um efeito
+       * de verdade. Marcado como "de uso" e sem duração de cena, ele fica de
+       * fora das DUAS listas que o sistema percorre para montar o cartão
+       * (nem a dos ativos, nem a dos suspensos), e `transfer: false` o mantém
+       * longe do ator. O efeito de uso que o chama continua achando ele pelo
+       * nome, que é o caminho que o sistema usa de qualquer jeito. */
+      const solto = !!ef.naoSuspenso;
+      lista.push({
+        name: nome, img, origin: item.uuid, description, changes,
+        disabled: !solto,
+        transfer: false,
+        duration: !uso && duracao !== "cena" ? { rounds: Number(duracao.rounds) || 1 } : {},
+        flags: {
+          tormenta20: {
+            onuse: solto || uso,
+            durationScene: !solto && (uso || duracao === "cena"),
+            self: false,
+            upgrade: `hayd-${key}`,
+            ...(mf.attack ? { attack: true } : {}),
+            ...(mf.spell ? { spell: true } : {}),
+            ...(mf.power ? { power: true } : {})
+          },
+          [MODULO]: {
+            entradaId, key, alvo: "item",
+            modelo: ef.modelo,
+            modeloUso: uso,
+            changesModelo: changes,
+            duracaoModelo: duracao,
+            suspensoNoAlvo: !!ef.suspensoNoAlvo,
+            expiraAoSofrerDano: !!ef.expiraAoSofrerDano,
+            ...extras
+          }
+        }
+      });
+      continue;
+    }
+
+    const passivo = !!ef.passivo;
+    const skill = !!ef.skill;
+    const magia = !!ef.spell;
+    const poder = !!ef.poder;
+
+    /* Efeitos passivos, de perícia (skill), de magia (spell), de poder e
+     * riders de ataque (ef.ataque: aplicam-se aos ataques do usuário, ex.:
+     * uma armadura que adiciona dano de ácido às armas) precisam viver NO
      * ATOR — o motor do sistema só os enxerga lá. Efeitos de uso do
      * próprio item (dano/condição da própria arma) ficam no item. */
     const rider = !!ef.ataque;
-    const alvoAtor = passivo || skill || !!ef.spell || rider;
+    const alvoAtor = passivo || skill || magia || poder || rider;
 
     /* Efeitos situacionais (só valem sob certa condição — "somente
      * contra construtos", "em manobras", crítico…) ou com custo em PM
      * vêm SUSPENSOS: aparecem desmarcados na janela de configuração de
      * uso e o jogador habilita quando se aplica. Passivos e de perícia
-     * (Aprimorado, restrito à sua perícia) ficam ativos por padrão. */
-    const suspenso = !passivo && !skill
-      && (!!ef.opcional || (ef.custo !== undefined && ef.custo !== ""));
+     * (Aprimorado, restrito à sua perícia) ficam ativos por padrão.
+     * `suspenso` no catálogo força o estado. */
+    const temCusto = ef.custo !== undefined && ef.custo !== "";
+    const suspenso = ef.suspenso ?? (!passivo && !skill && (!!ef.opcional || temCusto));
 
     const dados = {
       name: nome,
-      img: ICONES[entrada.tipo] ?? ICONES.melhoria,
+      img,
       // origin = uuid do item, como o próprio sistema faz ao criar efeitos
       // de upgrade. Sem isso, ef.sourceName fica nulo e o motor de rolagem
       // aplica o dmgStep (aumento de passo) na parte errada do dano.
       origin: item.uuid,
-      description: `<p>${ef.desc ?? entrada.beneficio}.${descCond}</p><p><em>${entrada.nome} (${entrada.fonte ?? "homebrew"})</em></p>`,
+      description,
       changes,
-      disabled: suspenso,
+      disabled: passivo ? false : suspenso,
       transfer: false,
       flags: {
         tormenta20: {
           onuse: !passivo,
           durationScene: !!ef.cena,
           upgrade: `hayd-${key}`,
-          self: !passivo && !skill && !ef.spell && !rider,
+          self: !alvoAtor,
           ...(skill ? { skill: true } : {}),
-          ...(ef.spell ? { spell: true } : {}),
+          ...(magia ? { spell: true } : {}),
+          ...(poder ? { power: true } : {}),
           ...(rider ? { attack: true } : {}),
-          ...(ef.custo !== undefined && ef.custo !== "" ? { custo: String(ef.custo) } : {})
+          ...(ef.aumenta ? { aumenta: true } : {}),
+          ...(temCusto ? { custo: String(ef.custo) } : {})
         },
-        [MODULO]: { entradaId, key, alvo: alvoAtor ? "ator" : "item" }
+        [MODULO]: { entradaId, key, alvo: alvoAtor ? "ator" : "item", ...extras }
       }
     };
 
     if (ef.condicaoLivre) dados.duration = { rounds: ef.rodadas ?? 1 };
 
-    /* Perícia escolhida pelo usuário (Aprimorado, Ajudante…): entra em
-     * "Itens específicos" (flags.tormenta20.items) — o efeito só aparece
-     * no diálogo de uso da perícia escolhida. */
-    if (skill && opcoes.pericia) {
-      const rotulo = CONFIG.T20?.pericias?.[opcoes.pericia]?.label ?? opcoes.pericia;
-      dados.name = `${nome} (${rotulo})`;
+    /* "Itens específicos" (flags.tormenta20.items): o efeito só aparece
+     * no diálogo de uso dos itens com esses nomes, separados por ";".
+     * Vale para a perícia escolhida (Aprimorado, Ajudante…), para a
+     * perícia fixa (Discreto → Ladinagem) e para os poderes/magias
+     * escolhidos na aba (Devotado, Sombria, Horrenda…). */
+    if (ef.restritoAEscolha) {
+      dados.flags.tormenta20.items = opcoes.alvos.join(";");
+    } else if (skill && ef.periciaFixa) {
+      dados.flags.tormenta20.items = rotuloPericia(ef.periciaFixa);
+    } else if (skill && opcoes.pericia) {
+      const rotulo = rotuloPericia(opcoes.pericia);
+      if (!ef.nomeExato) dados.name = `${nome} (${rotulo})`;
       dados.flags.tormenta20.items = rotulo;
     }
 

@@ -1,19 +1,19 @@
 /**
  * t20-hayd-itens | main.mjs
  * Ponto de entrada: substitui a aba de aprimoramentos do sistema pela
- * aba do módulo, registra homebrews e liga a Injeção Alquímica.
+ * aba do módulo, registra homebrews e liga as automações de uso.
  */
 
 import { MODULO } from "./catalogo.mjs";
 import * as catalogo from "./catalogo.mjs";
 import * as efeitos from "./efeitos.mjs";
+import * as automacoes from "./automacoes.mjs";
 import { aoRenderizarFichaItem } from "./aba.mjs";
 import { registrarHomebrew, abrirGerenciadorHomebrew, obterHomebrews } from "./homebrew.mjs";
 import { registrarEditor, abrirEditor, obterOverrides } from "./editor.mjs";
-import {
-  opcoesMenuContexto, aoRenderizarMensagem,
-  carregarAlquimico, descarregarAlquimico
-} from "./alquimica.mjs";
+import { opcoesMenuContexto, carregarAlquimico, descarregarAlquimico } from "./alquimica.mjs";
+import { aoRenderizarMensagem } from "./chat.mjs";
+import { registrarEnvoltorios } from "./rolagem.mjs";
 
 Hooks.once("init", () => {
   console.log(`${MODULO} | Inicializando — Itens Superiores e Mágicos`);
@@ -40,10 +40,19 @@ Hooks.once("init", () => {
   ]);
 });
 
+/* Depois do init do sistema: envolve rollDamage/displayCard do ItemT20. */
+Hooks.once("setup", () => {
+  try { registrarEnvoltorios(); }
+  catch (err) { console.error(`${MODULO} | Falha ao ligar as automações de rolagem`, err); }
+  try { automacoes.registrarEnvoltoriosDeAtor(); }
+  catch (err) { console.error(`${MODULO} | Falha ao ligar as automações do ator`, err); }
+});
+
 Hooks.once("ready", () => {
   const api = {
     catalogo,
     efeitos,
+    automacoes,
     homebrews: obterHomebrews,
     overrides: obterOverrides,
     abrirGerenciadorHomebrew,
@@ -64,7 +73,7 @@ Hooks.once("ready", () => {
       const f = item.flags[MODULO];
       const tarefas = [];
 
-      if (f.encantos?.some(e => e.key === "lancinante")
+      if (f.encantos?.some(e => e.key === "lancinante" && !e.desativada)
         && !Object.values(item.system?.upgrades ?? {}).includes("lancinating")) {
         tarefas.push(efeitos.sincronizarLancinante(item));
       }
@@ -102,21 +111,44 @@ Hooks.on("renderItemSheetT20", (app, html) => {
     console.error(`${MODULO} | Falha ao renderizar a aba`, err));
 });
 
-/* Menu de contexto (Injeção Alquímica) nas fichas de personagem. */
+/* Menu de contexto (Injeção Alquímica, Injetora, Conjuradora) nas fichas. */
 Hooks.on("tormenta20.getItemToggleContextOptions", (item, menuItems) => {
   try { opcoesMenuContexto(item, menuItems); }
   catch (err) { console.error(`${MODULO} | Falha no menu de contexto`, err); }
 });
 
-/* Botão de injeção no cartão de chat da arma. */
+/* Botões nos cartões do chat (ataque da arma e mensagens do módulo). */
 Hooks.on("renderChatMessageHTML", (mensagem, html) => {
   try { aoRenderizarMensagem(mensagem, html); }
   catch (err) { console.error(`${MODULO} | Falha no cartão de chat`, err); }
 });
 
+/* Disparo da Conjuradora: a janela de uso abre já configurada. */
+Hooks.on("renderAbilityUseDialog", (app, html) => {
+  try { automacoes.aoRenderizarDialogoUso(app, html); }
+  catch (err) { console.error(`${MODULO} | Falha ao preencher a janela de uso`, err); }
+});
+
+/* Dançarina: pergunta no início de cada turno se continua sustentada. */
+Hooks.on("updateCombat", (combate, mudou) => {
+  automacoes.aoAvancarTurno(combate, mudou).catch(err =>
+    console.error(`${MODULO} | Falha no lembrete da Dançarina`, err));
+});
+
+/* Cuidadora: a RD 10 some ao sofrer o próximo dano. */
+Hooks.on("preUpdateActor", (ator, mudou, opcoes) => {
+  try { automacoes.aoPreAtualizarAtor(ator, mudou, opcoes); }
+  catch (err) { console.error(`${MODULO} | Falha ao checar dano sofrido`, err); }
+});
+Hooks.on("updateActor", (ator, mudou, opcoes, userId) => {
+  automacoes.aoAtualizarAtor(ator, mudou, opcoes, userId).catch(err =>
+    console.error(`${MODULO} | Falha ao remover a RD da Cuidadora`, err));
+});
+
 /* Item gerenciado entra numa ficha: cria no ator os efeitos passivos,
- * de perícia e de magia das entradas do item (a transferência nativa do
- * sistema não cobre efeitos criados depois que o item já era possuído). */
+ * de perícia, de magia e de poder das entradas do item (a transferência
+ * nativa do sistema não cobre efeitos criados depois que o item já era
+ * possuído) e escolhe os poderes/magias sugeridos. */
 Hooks.on("createItem", (item, options, userId) => {
   if (game.user.id !== userId) return;
   if (!item.actor || !catalogo.itemElegivel(item)) return;
@@ -124,6 +156,37 @@ Hooks.on("createItem", (item, options, userId) => {
   if (!f || (!f.melhorias?.length && !f.encantos?.length && !f.materiais?.length)) return;
   efeitos.sincronizarEfeitosAtor(item).catch(err =>
     console.error(`${MODULO} | Falha ao sincronizar efeitos com o ator`, err));
+});
+
+/* Item renomeado: efeitos com o nome da arma (Cantante, Discreto) acompanham. */
+Hooks.on("updateItem", (item, mudou, options, userId) => {
+  if (game.user.id !== userId || !("name" in mudou) || !item.flags?.[MODULO]) return;
+  efeitos.atualizarNomesDinamicos(item).catch(err =>
+    console.error(`${MODULO} | Falha ao renomear efeitos`, err));
+});
+
+/* Poder/magia renomeado: as entradas que o escolheram guardam o NOME, então
+ * o vínculo se perderia. Só em `preUpdate` os dois nomes existem ao mesmo
+ * tempo — o documento ainda tem o antigo e a mudança traz o novo. */
+const nomesAntigos = new Map();
+
+Hooks.on("preUpdateItem", (item, mudou, options, userId) => {
+  if (game.user.id !== userId || !mudou?.name || mudou.name === item.name) return;
+  if (!item.actor || !["poder", "magia"].includes(item.type)) return;
+  nomesAntigos.set(item.uuid, item.name);
+});
+
+Hooks.on("updateItem", (item, mudou, options, userId) => {
+  const antigo = nomesAntigos.get(item.uuid);
+  if (antigo === undefined) return;
+  nomesAntigos.delete(item.uuid);
+  if (game.user.id !== userId || !item.actor) return;
+
+  efeitos.renomearAlvos(item.actor, antigo, item.name).then(corrigidos => {
+    if (!corrigidos.length) return;
+    ui.notifications.info(`"${antigo}" virou "${item.name}": vínculo atualizado em ${corrigidos.join(", ")}.`);
+  }).catch(err =>
+    console.error(`${MODULO} | Falha ao atualizar os vínculos do item renomeado`, err));
 });
 
 /* Item sai da ficha: limpa os efeitos que ele originou no ator. */

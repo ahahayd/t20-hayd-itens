@@ -23,13 +23,26 @@ https://github.com/ahahayd/t20-hayd-itens/releases/latest/download/module.json
 
 Abra a ficha de um item físico (arma, armadura, equipamento…) e vá até a aba **Melhorias & Encantos**. Adicione quantos aprimoramentos quiser — não há limite de slots — e o preço do item é recalculado automaticamente a cada mudança.
 
+Cada melhoria ou encanto aplicado pode ser **desativado individualmente** pelo botão ao lado dele: a automação para de agir (útil quando um efeito do jogo anula só aquele encanto, ou quando você prefere resolver na mão), mas o preço e as características do item continuam iguais. Desativar e reativar também atualiza a entrada para a versão mais recente do módulo.
+
+### Escolher o poder ou a magia beneficiada
+
+Melhorias e encantos que valem para um poder ou uma magia específica (Devotado, Conduíte, Diligente, Harmonizado, Sombria, Horrenda, Assassina…) mostram na aba uma caixa para escolher o poder ou a magia da ficha. Quando possível, o módulo já escolhe sozinho (Abençoar Arma, Prece de Combate, Escuridão, Ataque Furtivo). A redução de custo aparece no uso do poder ou da magia escolhida, e só nela.
+
 ### Materiais especiais
 
-Os materiais especiais aparecem destacados visualmente na aba, com seus efeitos e ajuste de preço aplicados junto com o restante.
+Os materiais especiais aparecem destacados visualmente na aba. Cada material tem efeitos diferentes conforme o tipo de item — arma, armadura leve, armadura pesada, escudo ou esotérico. O módulo escolhe o tipo certo sozinho, você pode trocá-lo na aba, e a lista só mostra os materiais que servem para aquele item.
 
-### Injeção Alquímica
+### Automações de uso
 
-A melhoria de Injeção Alquímica é automatizada: o item registra o preparado alquímico e o aplica ao uso, seguindo a regra oficial.
+- **Injeção Alquímica e Injetora:** carregue, veja e remova as doses pela própria aba. Ao carregar, o chat mostra o que entrou na arma; ao atacar, o cartão oferece a injeção.
+- **Conjuradora:** guarde na arma uma magia da ficha, já com aprimoramentos, pagando o custo na hora. No ataque, um botão no cartão dispara a magia.
+- **Dançarina:** ative pela aba ou pelo efeito de uso. No início de cada turno, o chat pergunta se ela continua sustentada.
+- **Frenética e Piedosa:** controles na aba para gastar PM, ajustar o bônus e ligar ou desligar o encanto, com registro no chat.
+- **Sanguinária e Ressonante:** botões no cartão do ataque para aplicar ou agravar o sangramento e para a onda de choque psíquica.
+- **Elétrica, Flamejante, Drenante e Infestada:** o raio, a bola de fogo, os PV temporários e o dano do enxame saem rolados no próprio cartão do ataque.
+- **Anátema, Cantante, Corrosiva, Cuidadora e Gárgula:** os efeitos que atingem o alvo ou os aliados aparecem como botões de aplicar no cartão do chat.
+- **Pena de Kraken e Assassina:** o crítico aumenta o dano da arma, e o Ataque Furtivo rola d8 e pode rolar de novo os resultados 1.
 
 ### Homebrews
 

@@ -2,18 +2,30 @@
  * t20-hayd-itens | aba.mjs
  * Substitui a aba de Aprimoramentos do sistema pela aba
  * "Melhorias & Encantos" do módulo, sem limite de slots.
+ *
+ * Cada entrada aplicada pode ser desligada individualmente, escolher o
+ * poder/magia que recebe o efeito (Devotado, Sombria, Horrenda…), trocar
+ * a variante do material e controlar a automação própria (doses da
+ * Injeção Alquímica, magia da Conjuradora, Dançarina, Frenética, Piedosa).
  */
 
 import {
-  MODULO, CATEGORIAS, categoriasDoItem, itemElegivel, categoriaMaterialDoItem,
-  obterMelhorias, obterEncantos, obterMateriais, obterEntrada, versaoCatalogo
+  MODULO, CATEGORIAS, VARIANTES, categoriasDoItem, itemElegivel, categoriaMaterialDoItem,
+  obterMelhorias, obterEncantos, obterMateriais, obterEntrada, versaoCatalogo,
+  variantesDoMaterial, varianteInicial, beneficioDaVariante
 } from "./catalogo.mjs";
 import {
   dadosDoItem, ehMunicao, calcularPreco, definirPrecoBase,
-  adicionarEntrada, adicionarMaterial, removerEntrada, atualizarCustoMaterial
+  adicionarEntrada, adicionarMaterial, removerEntrada, atualizarCustoMaterial,
+  alternarEntrada, definirAlvos, definirVariante, nomesParaEscolha, registroPorId, MAX_FRENETICA
 } from "./efeitos.mjs";
 import { abrirGerenciadorHomebrew } from "./homebrew.mjs";
-import { descarregarAlquimico, descarregarInjetora } from "./alquimica.mjs";
+import { carregarAlquimico, descarregarAlquimico, carregarInjetora, descarregarInjetora } from "./alquimica.mjs";
+import {
+  carregarConjuradora, descartarConjuradora, dispararConjuradora,
+  ativarDancarina, desativarDancarina, gastarFrenetica, ajustarFrenetica, alternarPiedosa
+} from "./automacoes.mjs";
+import { acharSugestao } from "./regras.mjs";
 
 const ABA_ID = "hayd-itens";
 
@@ -88,16 +100,107 @@ function memoOpcoes(chave, montar) {
   return valor;
 }
 
-function montarLista(entradas, todasEntradas = null) {
+/** Seletor de poder/magia de uma entrada (Devotado, Sombria, Horrenda…). */
+function montarEscolha(item, escolha, alvos) {
+  const tipos = escolha.tipos ?? ["poder"];
+  const rotulo = escolha.rotulo
+    ?? (tipos.length > 1 ? "Poderes e magias" : tipos[0] === "magia" ? "Magia" : "Poder");
+  const base = {
+    rotulo,
+    multipla: !!escolha.multipla,
+    selecionados: alvos.map(nome => ({ nome }))
+  };
+  if (!item.actor) return { ...base, semAtor: true };
+
+  const nomes = nomesParaEscolha(item.actor, escolha).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const semOpcoes = !nomes.length;
+  // Escolhido que sumiu da ficha: quase sempre um poder renomeado. A sugestão
+  // é o nome mais parecido entre os que sobraram, para revincular num clique.
+  const ausentes = alvos
+    .filter(n => !nomes.includes(n))
+    .map(nome => ({ nome, sugestao: (!semOpcoes && acharSugestao(nomes, nome)) || "" }));
+  const nomesAusentes = ausentes.map(a => a.nome);
+
+  let aviso = "";
+  if (semOpcoes) aviso = `O personagem não tem ${tipos.includes("magia") && tipos.includes("poder") ? "poderes nem magias" : tipos[0] === "magia" ? "magias" : "poderes"} na ficha.`;
+  else if (!alvos.length) aviso = "Nada escolhido: a automação desta entrada ainda não se aplica.";
+
+  const plural = ausentes.length > 1;
+  const avisoQuebrado = ausentes.length
+    ? `${ausentes.map(a => `“${a.nome}”`).join(", ")} ${plural ? "não estão" : "não está"} mais na ficha — renomeado ou removido. A automação desta entrada não se aplica até revincular.`
+    : "";
+
+  return {
+    ...base,
+    selecionados: alvos.map(nome => ({
+      nome,
+      ausente: nomesAusentes.includes(nome),
+      sugestao: ausentes.find(a => a.nome === nome)?.sugestao ?? ""
+    })),
+    opcoes: nomes
+      .filter(n => !escolha.multipla || !alvos.includes(n))
+      .map(n => ({ nome: n, sel: !escolha.multipla && alvos[0] === n })),
+    ausentes,
+    quebrado: !!ausentes.length,
+    avisoQuebrado,
+    aviso
+  };
+}
+
+/** Painel da automação própria de uma entrada (ou null). */
+function montarPainel(item, reg, def, d, editavel) {
+  const estado = d.estado[reg.id] ?? {};
+  const temAtor = !!item.actor;
+  const podeUsar = temAtor && editavel;
+
+  const carga = (doses, max, acao, dica) => ({
+    carga: true, max, acao,
+    doses: doses.map((a, i) => ({ nome: a.name, img: a.img, indice: i, acao, podeUsar })),
+    podeCarregar: podeUsar && doses.length < max,
+    dica: temAtor ? dica : "Coloque o item na ficha de um personagem para carregar."
+  });
+
+  switch (def.especial) {
+    case "alquimica":
+      return carga(d.alquimicos, 2, "injecao",
+        "Carregar exige ação completa. Ao atacar, o cartão da arma no chat oferece a injeção.");
+    case "injetora":
+      return carga(d.injetora, 1, "injetora",
+        "Carregar exige ação completa; ingerir (ação de movimento) pelo clique direito na armadura.");
+    case "conjuradora": {
+      const m = estado.magia;
+      return {
+        conjuradora: true, podeUsar, semAtor: !temAtor,
+        magia: m ? { nome: m.dados?.name, img: m.dados?.img, resumo: (m.resumo ?? []).join(", "), custo: m.custo ?? 0 } : null
+      };
+    }
+    case "dancarina":
+      return { dancarina: true, podeUsar, ativa: !!estado.ativa };
+    case "frenetica": {
+      const bonus = Number(estado.bonus) || 0;
+      return {
+        frenetica: true, podeUsar, podeEditar: editavel, bonus, max: MAX_FRENETICA,
+        podeMais: bonus < MAX_FRENETICA, podeMenos: bonus > 0
+      };
+    }
+    case "piedosa":
+      return { piedosa: true, podeUsar, ativa: !estado.inativa };
+  }
+  return null;
+}
+
+function montarLista(item, lista, entradas, d, editavel, todasEntradas = null) {
   const todas = todasEntradas ?? entradas;
   const porId = new Map(todas.map(x => [x.id, x]));
   return entradas.map(e => {
     const def = obterEntrada(e.key) ?? {};
     const supressor = e.suprimidaPor ? porId.get(e.suprimidaPor) : null;
     const rotuloPericia = e.pericia ? (CONFIG?.T20?.pericias?.[e.pericia]?.label ?? e.pericia) : "";
-    return {
+    const linha = {
       id: e.id,
       key: e.key,
+      lista,
+      ehMaterial: lista === "materiais",
       nome: def.nome ?? e.key,
       pericia: rotuloPericia,
       beneficio: def.beneficio ?? "",
@@ -106,52 +209,72 @@ function montarLista(entradas, todasEntradas = null) {
       homebrew: !!def.homebrew,
       nEfeitos: (def.efeitos ?? []).length || (def.especial ? 1 : 0),
       suprimida: !!e.suprimidaPor,
+      suprimidaTexto: lista === "encantos" ? "substituído por" : "substituída por",
       suprimidaNome: supressor ? (obterEntrada(supressor.key)?.nome ?? supressor.key) : "",
+      desativada: !!e.desativada,
       custo: e.custo
     };
+
+    if (lista === "materiais") {
+      const variante = e.variante ?? varianteInicial(def, item);
+      const possiveis = variantesDoMaterial(def);
+      linha.beneficio = beneficioDaVariante(def, variante);
+      linha.nEfeitos = (def.efeitos ?? []).filter(ef => !ef.variantes || ef.variantes.includes(variante)).length
+        || (def.especial && variante === "arma" ? 1 : 0);
+      if (possiveis.length > 1) linha.variantes = possiveis.map(v => ({ key: v, rotulo: VARIANTES[v], sel: v === variante }));
+      else linha.varianteNome = VARIANTES[variante] ?? "";
+    }
+
+    if (def.escolha) {
+      linha.escolha = montarEscolha(item, def.escolha, e.alvos ?? []);
+      linha.quebrada = !!linha.escolha.quebrado;
+    }
+    if (!e.desativada && !e.suprimidaPor) linha.painel = montarPainel(item, e, def, d, editavel);
+    return linha;
   });
 }
 
 async function montarContexto(app, item) {
   const d = dadosDoItem(item);
+  const editavel = app.isEditable;
   const todas = !!app._haydTodasCategorias;
   const cats = categoriasDoItem(item);
   const catPreco = categoriaMaterialDoItem(item);
   const mult = ehMunicao(item) ? 0.5 : 1;
 
-  const opcoesMateriais = memoOpcoes(`materiais|${catPreco}|${mult}`, () =>
-    Object.entries(obterMateriais()).map(([key, def]) => {
-      const preco = (def.precos?.[catPreco] ?? 0) * mult;
-      return {
-        key,
-        nome: def.nome,
-        beneficio: def.beneficio ?? "",
-        raro: !!def.raro,
-        homebrew: !!def.homebrew,
-        custoFmt: preco ? `T$ ${preco.toLocaleString("pt-BR")}` : "custo manual"
-      };
-    }).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
+  // Só materiais com variante para a categoria do item (salvo "todas").
+  const opcoesMateriais = memoOpcoes(`materiais|${catPreco}|${mult}|${todas}`, () =>
+    Object.entries(obterMateriais())
+      .filter(([, def]) => todas || variantesDoMaterial(def).includes(catPreco))
+      .map(([key, def]) => {
+        const preco = (def.precos?.[catPreco] ?? 0) * mult;
+        return {
+          key,
+          nome: def.nome,
+          beneficio: beneficioDaVariante(def, catPreco),
+          raro: !!def.raro,
+          homebrew: !!def.homebrew,
+          custoFmt: preco ? `T$ ${preco.toLocaleString("pt-BR")}` : "custo manual"
+        };
+      })
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")));
 
   const chaveCats = todas ? "*" : cats.join(",");
   const aplicadas = [...d.melhorias, ...d.encantos];
 
   return {
-    editavel: app.isEditable,
+    editavel,
     municao: ehMunicao(item),
     todasCategorias: todas,
     // Item já sob gestão do módulo (tem preço base capturado)
     gerenciado: d.precoBase !== null,
     preco: calcularPreco(item),
-    melhorias: montarLista(d.melhorias, aplicadas),
-    encantos: montarLista(d.encantos, aplicadas),
-    materiais: montarLista(d.materiais),
+    melhorias: montarLista(item, "melhorias", d.melhorias, d, editavel, aplicadas),
+    encantos: montarLista(item, "encantos", d.encantos, d, editavel, aplicadas),
+    materiais: montarLista(item, "materiais", d.materiais, d, editavel),
     opcoesMelhorias: memoOpcoes(`melhorias|${chaveCats}`, () => agruparPorCategoria(obterMelhorias(), cats, todas)),
     opcoesEncantos: memoOpcoes(`encantos|${chaveCats}`, () => agruparPorCategoria(obterEncantos(), cats, todas)),
     opcoesMateriais,
-    temInjecao: d.melhorias.some(m => m.key === "injecao-alquimica"),
-    alquimicos: d.alquimicos.map(a => ({ name: a.name, img: a.img })),
-    temInjetora: d.melhorias.some(m => m.key === "injetora"),
-    dosesInjetora: d.injetora.map(a => ({ name: a.name, img: a.img })),
     temAtor: !!item.actor
   };
 }
@@ -263,6 +386,40 @@ function acao(app, fn) {
   };
 }
 
+/** Entrada (lista e id) da linha em que o controle está. */
+function linhaDe(el) {
+  const li = el.closest("[data-entrada-id]");
+  return { id: li?.dataset.entradaId, lista: li?.dataset.lista };
+}
+
+/* Botões [data-acao] das linhas: (item, {id, lista}, elemento) → Promise */
+const ACOES = {
+  "alternar": (item, l) => alternarEntrada(item, l.lista, l.id),
+  "escolha-remover": (item, l, el) => {
+    const alvos = registroPorId(item, l.id)?.reg.alvos ?? [];
+    return definirAlvos(item, l.lista, l.id, alvos.filter(n => n !== el.dataset.nome));
+  },
+  "escolha-revincular": (item, l, el) => {
+    const alvos = registroPorId(item, l.id)?.reg.alvos ?? [];
+    const { nome, sugestao } = el.dataset;
+    if (!sugestao) return null;
+    return definirAlvos(item, l.lista, l.id, alvos.map(n => (n === nome ? sugestao : n)));
+  },
+  "injecao-carregar": item => carregarAlquimico(item),
+  "injecao-descarregar": (item, l, el) => descarregarAlquimico(item, Number(el.dataset.indice)),
+  "injetora-carregar": item => carregarInjetora(item),
+  "injetora-descarregar": (item, l, el) => descarregarInjetora(item, Number(el.dataset.indice)),
+  "conjuradora-carregar": (item, l) => carregarConjuradora(item, l.id),
+  "conjuradora-disparar": (item, l) => dispararConjuradora(item, l.id),
+  "conjuradora-descartar": (item, l) => descartarConjuradora(item, l.id),
+  "dancarina-ativar": (item, l) => ativarDancarina(item, l.id, { pagar: true }),
+  "dancarina-desativar": (item, l) => desativarDancarina(item, l.id),
+  "frenetica-gastar": (item, l) => gastarFrenetica(item, l.id),
+  "frenetica-mais": (item, l) => ajustarFrenetica(item, l.id, 1),
+  "frenetica-menos": (item, l) => ajustarFrenetica(item, l.id, -1),
+  "piedosa-alternar": (item, l) => alternarPiedosa(item, l.id)
+};
+
 function ativarListeners(app, item, $aba) {
   // Alternar filtro de categorias
   $aba.find(".hayd-todas-categorias").on("change", acao(app, ev => {
@@ -311,9 +468,27 @@ function ativarListeners(app, item, $aba) {
   $aba.find(".hayd-abrir-homebrew").on("click", () =>
     abrirGerenciadorHomebrew(() => app._haydAtualizar?.()));
 
-  // Descarregar alquímico / injetora
-  $aba.find(".hayd-descarregar").on("click", acao(app, ev =>
-    descarregarAlquimico(item, Number(ev.currentTarget.dataset.indice))));
-  $aba.find(".hayd-descarregar-injetora").on("click", acao(app, ev =>
-    descarregarInjetora(item, Number(ev.currentTarget.dataset.indice))));
+  // Botões das linhas (ligar/desligar, doses, Conjuradora, Dançarina…)
+  $aba.find("[data-acao]").on("click", acao(app, ev => {
+    const el = ev.currentTarget;
+    return ACOES[el.dataset.acao]?.(item, linhaDe(el), el);
+  }));
+
+  // Escolha de poder/magia
+  $aba.find(".hayd-escolha-unica").on("change", acao(app, ev => {
+    const l = linhaDe(ev.currentTarget);
+    const valor = ev.currentTarget.value;
+    return definirAlvos(item, l.lista, l.id, valor ? [valor] : []);
+  }));
+  $aba.find(".hayd-escolha-add").on("change", acao(app, ev => {
+    const l = linhaDe(ev.currentTarget);
+    const valor = ev.currentTarget.value;
+    if (!valor) return;
+    const alvos = registroPorId(item, l.id)?.reg.alvos ?? [];
+    return definirAlvos(item, l.lista, l.id, [...alvos, valor]);
+  }));
+
+  // Variante do material
+  $aba.find(".hayd-variante").on("change", acao(app, ev =>
+    definirVariante(item, linhaDe(ev.currentTarget).id, ev.currentTarget.value)));
 }
