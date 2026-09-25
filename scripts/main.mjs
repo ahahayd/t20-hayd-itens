@@ -67,7 +67,8 @@ Hooks.once("ready", () => {
 
   // Migração leve (GM): (1) marcador nativo do Lancinante; (2) preenche
   // origin nos efeitos do módulo criados antes desta versão — sem origin,
-  // o motor de rolagem aplicava o aumento de passo na parte errada do dano.
+  // o motor de rolagem aplicava o aumento de passo na parte errada do dano;
+  // (3) refaz o Geomântico que dava RD só contra impacto.
   if (game.user === game.users.activeGM) {
     const corrigir = async (item) => {
       const f = item.flags[MODULO];
@@ -78,6 +79,13 @@ Hooks.once("ready", () => {
         tarefas.push(efeitos.sincronizarLancinante(item));
       }
 
+      // Geomântico antigo: dava RD só contra impacto (o certo é RD 10/impacto,
+      // contra tudo exceto impacto). Refaz a entrada com a definição atual.
+      const errado = c => c.key === "system.tracos.resistencias.impacto.bonus";
+      const geomanticos = (f.encantos ?? []).filter(reg => reg.key === "geomantico"
+        && ([...item.effects].some(e => e.flags?.[MODULO] && e.changes.some(errado))
+          || [...(item.actor?.effects ?? [])].some(e => e.origin?.includes(item.id) && e.changes.some(errado))));
+
       const semOrigin = [...item.effects].filter(e => e.flags?.[MODULO] && !e.origin);
       if (semOrigin.length) {
         tarefas.push(item.updateEmbeddedDocuments("ActiveEffect",
@@ -85,6 +93,8 @@ Hooks.once("ready", () => {
       }
 
       if (tarefas.length) await Promise.all(tarefas);
+      // Depois das demais: reconstruir apaga e recria efeitos que elas podem tocar
+      for (const reg of geomanticos) await efeitos.reconstruirEntrada(item, "encantos", reg.id);
     };
     (async () => {
       // Seleciona os candidatos primeiro: em mundos grandes, criar uma

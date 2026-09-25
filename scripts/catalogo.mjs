@@ -135,6 +135,11 @@ export const CONDICOES = {
 
 /** Redução de dano de um tipo (dano = RD geral), como o próprio sistema monta. */
 const RD = (tipo, valor) => ({ key: `system.tracos.resistencias.${tipo}.bonus`, value: String(valor) });
+/**
+ * "RD X/tipo": RD X contra todo dano, EXCETO o tipo — o campo "Exceção" da
+ * RD na ficha do ator. (RD X/mágico não tem equivalente no sistema.)
+ */
+const RDExceto = (tipo, valor) => ({ key: `system.tracos.resistencias.${tipo}.excecao`, value: String(valor) });
 
 /* ================================================================== */
 /* MELHORIAS                                                          */
@@ -858,7 +863,7 @@ export const ENCANTOS = {
   "geomantico": { nome: "Geomântico", tipo: "encanto", cats: ["armadura", "escudo"], fonte: "HA p.260",
     beneficio: "RD 10/impacto e fortificação 25%; lança Controlar Terra",
     nota: "Fortificação e a magia ficam por sua conta",
-    efeitos: [{ passivo: true, changes: [RD("impacto", 10)], desc: "Redução de impacto 10" }] },
+    efeitos: [{ passivo: true, changes: [RDExceto("impacto", 10)], desc: "RD 10 contra todo dano, exceto impacto" }] },
 
   "ligeira": { nome: "Ligeira", tipo: "encanto", cats: ["armadura"], fonte: "HA p.260",
     beneficio: "Pode ser vestida/removida como ação livre", efeitos: [] },
