@@ -96,7 +96,7 @@ export async function carregarConjuradora(item, entradaId) {
     : "";
   const escolha = await DialogV2.prompt({
     window: { title: `Conjuradora — ${item.name}` },
-    content: `<p>Escolha a magia a guardar. Em seguida, configure-a como se fosse lançá-la (aprimoramentos e bônus); o custo em PM é pago agora.</p>${aviso}
+    content: `<p>Escolha a magia e configure-a como se fosse lançá-la. O PM é pago agora.</p>${aviso}
       <div class="form-group"><label>Magia</label><select name="magiaId">${opcoes}</select></div>`,
     ok: { label: "Configurar", callback: (ev, btn) => new foundry.applications.ux.FormDataExtended(btn.form).object }
   }).catch(() => null);

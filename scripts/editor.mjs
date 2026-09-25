@@ -48,7 +48,7 @@ export function registrarEditor() {
   game.settings.registerMenu(MODULO, "editorEfeitos", {
     name: "Editor de Efeitos",
     label: "Abrir Editor de Efeitos",
-    hint: "Modifique individualmente o que cada melhoria, encanto e material concede e como concede.",
+    hint: "Ajuste o que cada melhoria, encanto e material concede.",
     icon: "fa-solid fa-sliders",
     type: class extends FormApplication {
       render() { abrirEditor(); return this; }

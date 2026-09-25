@@ -16,7 +16,7 @@
         <input type="checkbox" name="especialDesabilitado" {{#if especialDesabilitado}}checked{{/if}}>
         Desabilitar automação especial ({{especialNome}})
       </label>
-      <p class="notes">Com isto marcado, a automação exclusiva desta melhoria não faz nada — só os efeitos abaixo se aplicam.</p>
+      <p class="notes">Desliga a automação própria desta entrada; só os efeitos abaixo valem.</p>
     </div>
     {{/if}}
   </div>
@@ -27,7 +27,7 @@
       <legend>
         Efeito {{sum @index 1}}
         <button type="button" class="hayd-icone hayd-rem-efeito" data-idx="{{@index}}" data-tooltip="Remover efeito"><i class="fa-solid fa-trash"></i></button>
-        {{#if this.extra}}<i class="fa-solid fa-gears hayd-extra-ic" data-tooltip="Tem automação avançada (escolha de poder/magia, efeito oferecido no chat, rolagem extra…), preservada ao salvar"></i>{{/if}}
+        {{#if this.extra}}<i class="fa-solid fa-gears hayd-extra-ic" data-tooltip="Tem automação avançada, preservada ao salvar."></i>{{/if}}
       </legend>
       <input type="hidden" name="ef.{{@index}}.extra" value="{{this.extra}}">
 

@@ -576,14 +576,14 @@ export async function adicionarEntrada(item, key, opcoes = {}) {
         idsSuprimidos.push(e.id);
         mudou.add(nomeLista);
         const nomeAlvo = obterEntrada(e.key)?.nome ?? e.key;
-        ui.notifications.info(`${def.nome} substitui ${nomeAlvo}: o bônus anterior foi suprimido (não acumula).`);
+        ui.notifications.info(`${def.nome} substitui ${nomeAlvo}: os bônus não acumulam.`);
       }
     }
   }
 
   if (suprimidaPor) {
     const nomeSup = obterEntrada(suprimidaPor.key)?.nome ?? suprimidaPor.key;
-    ui.notifications.info(`${def.nome}: bônus substituído por ${nomeSup} (não acumula).`);
+    ui.notifications.info(`${def.nome}: substituído por ${nomeSup}, os bônus não acumulam.`);
   }
 
   // Estado futuro do item — inclui o preço base capturado na 1ª adição.
@@ -612,7 +612,7 @@ export async function adicionarEntrada(item, key, opcoes = {}) {
   if (key === "lancinante" || def.especial === "lancinante") avisarLancinante(dNovo);
 
   if (def.especial === "alquimica") {
-    ui.notifications.info("Injeção Alquímica: carregue preparados na aba Melhorias & Encantos ou pelo clique direito na arma, na ficha do personagem.");
+    ui.notifications.info("Injeção Alquímica: carregue preparados na aba Melhorias & Encantos ou com clique direito na arma.");
   }
   if (def.escolha && !registro.alvos?.length && !suprimidaPor) {
     ui.notifications.info(`${def.nome}: escolha na aba Melhorias & Encantos qual ${(def.escolha.rotulo ?? "poder ou magia").toLowerCase()} recebe o efeito.`);

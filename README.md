@@ -46,7 +46,7 @@ Os materiais especiais aparecem destacados visualmente na aba. Cada material tem
 
 ### Homebrews
 
-O Mestre pode criar melhorias e encantos personalizados pelo editor de efeitos incluído, que ficam disponíveis na aba como qualquer aprimoramento oficial.
+O Mestre pode criar melhorias e encantos personalizados pelo editor de efeitos incluído, que ficam disponíveis na aba como qualquer aprimoramento oficial. O editor também ajusta as entradas oficiais. Entradas com automação avançada (escolha de poder ou magia, efeito oferecido no chat, rolagem extra) são marcadas com uma engrenagem, e essa automação é preservada ao salvar.
 
 ## Detalhes adicionais
 
