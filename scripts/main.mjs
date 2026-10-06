@@ -4,6 +4,7 @@
  * aba do módulo, registra homebrews e liga as automações de uso.
  */
 
+import './hayd-ui-base.mjs';
 import { MODULO } from "./catalogo.mjs";
 import * as catalogo from "./catalogo.mjs";
 import * as efeitos from "./efeitos.mjs";

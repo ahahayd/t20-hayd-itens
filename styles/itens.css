@@ -1,3 +1,7 @@
+/* Base visual compartilhada dos módulos Hayd. Entra por @import, e não pelo
+   manifesto, para uma atualização valer com F5. */
+@import url("hayd-ui-base.css");
+
 /* ════════════════════════════════════════════════════════════════
    t20-hayd-itens — aba "Melhorias & Encantos" e diálogos
    Visual neutro: herda as cores da ficha de item do sistema.
