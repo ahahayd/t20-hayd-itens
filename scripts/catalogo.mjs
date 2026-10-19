@@ -22,6 +22,7 @@
  */
 
 import { preencherMarcadores, temMarcadores } from "./regras.mjs";
+import { ehV14 } from "./versao.mjs";
 
 export const MODULO = "t20-hayd-itens";
 
