@@ -15,12 +15,18 @@ import { registrarEditor, abrirEditor, obterOverrides } from "./editor.mjs";
 import { opcoesMenuContexto, carregarAlquimico, descarregarAlquimico } from "./alquimica.mjs";
 import { aoRenderizarMensagem } from "./chat.mjs";
 import { registrarEnvoltorios } from "./rolagem.mjs";
+import { ehV14, aguardarMigracaoDoSistema, corrigirSupressaoDoSistema } from "./versao.mjs";
 
 Hooks.once("init", () => {
   console.log(`${MODULO} | Inicializando — Itens Superiores e Mágicos`);
 
   registrarHomebrew();
   registrarEditor();
+
+  // Versão dos dados gravados no mundo (migração do v14, ver migrar()).
+  game.settings.register(MODULO, "versaoDados", {
+    scope: "world", config: false, type: Number, default: 1
+  });
 
   game.settings.registerMenu(MODULO, "homebrewMenu", {
     name: "Homebrews de Melhorias e Encantos",
@@ -43,6 +49,11 @@ Hooks.once("init", () => {
 
 /* Depois do init do sistema: envolve rollDamage/displayCard do ItemT20. */
 Hooks.once("setup", () => {
+  // v14: contorno do cache de supressão do Tormenta20 1.6 (ver versao.mjs).
+  if (ehV14()) {
+    try { corrigirSupressaoDoSistema(); }
+    catch (err) { console.error(`${MODULO} | Falha ao corrigir a supressão de efeitos`, err); }
+  }
   try { registrarEnvoltorios(); }
   catch (err) { console.error(`${MODULO} | Falha ao ligar as automações de rolagem`, err); }
   try { automacoes.registrarEnvoltoriosDeAtor(); }
@@ -66,11 +77,16 @@ Hooks.once("ready", () => {
   globalThis.t20HaydItens = api;
   console.log(`${MODULO} | Pronto. API em game.modules.get("${MODULO}").api`);
 
-  // Migração leve (GM): (1) marcador nativo do Lancinante; (2) preenche
+  // v14: refaz os efeitos no formato do Tormenta20 1.6 (migrar(), abaixo).
+  if (ehV14() && game.user === game.users.activeGM) {
+    migrar().catch(err => console.error(`${MODULO} | Falha na migração`, err));
+  }
+
+  // v13 — migração leve (GM): (1) marcador nativo do Lancinante; (2) preenche
   // origin nos efeitos do módulo criados antes desta versão — sem origin,
   // o motor de rolagem aplicava o aumento de passo na parte errada do dano;
   // (3) refaz o Geomântico que dava RD só contra impacto.
-  if (game.user === game.users.activeGM) {
+  if (!ehV14() && game.user === game.users.activeGM) {
     const corrigir = async (item) => {
       const f = item.flags[MODULO];
       const tarefas = [];
@@ -109,6 +125,64 @@ Hooks.once("ready", () => {
     })();
   }
 });
+
+/* ------------------------------------------------------------------ */
+/* Migração para o v14                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Versão dos dados gravados pelo módulo no mundo (só avança no v14).
+ *   1 — Tormenta20 1.5 / Foundry v13
+ *   2 — Tormenta20 1.6 / Foundry v14: efeitos refeitos no formato novo
+ *   3 — efeitos de uso no padrão do 1.6 (título curto, descrição do efeito)
+ *   4 — materiais descrevem só a variante do item (arma, armadura…)
+ *   5 — sem o aviso "(substitui …)" na descrição dos efeitos
+ *   6 — título pelo tipo (Melhoria/Encanto/Material Especial), nome na descrição
+ *   7 — passivos e temporários: "Melhoria: Guarda", descrição só com o efeito
+ */
+const VERSAO_DADOS = 7;
+
+/** Itens gerenciados do mundo: soltos, nas fichas e nos tokens não vinculados. */
+function itensGerenciados() {
+  const itens = [];
+  const juntar = colecao => { for (const item of colecao ?? []) if (item.flags?.[MODULO]) itens.push(item); };
+  juntar(game.items);
+  for (const ator of game.actors) juntar(ator.items);
+  for (const cena of game.scenes) {
+    for (const token of cena.tokens) if (!token.actorLink && token.actor) juntar(token.actor.items);
+  }
+  return itens;
+}
+
+async function migrar() {
+  const versao = game.settings.get(MODULO, "versaoDados");
+  const candidatos = itensGerenciados();
+
+  if (versao < VERSAO_DADOS && candidatos.length) {
+    // A migração do sistema reescreve os efeitos do mundo; só depois dela.
+    await aguardarMigracaoDoSistema();
+    const aviso = ui.notifications.info(`T20 Hayd Itens: atualizando os efeitos de ${candidatos.length} item(ns) para o Tormenta20 1.6…`, { permanent: true });
+    let falhas = 0;
+    for (const item of candidatos) {
+      try { await efeitos.reconstruirItem(item); }
+      catch (err) { falhas++; console.error(`${MODULO} | Falha ao migrar ${item.uuid}`, err); }
+    }
+    ui.notifications.remove?.(aviso);
+    if (falhas) ui.notifications.warn(`T20 Hayd Itens: ${falhas} item(ns) não puderam ser atualizados — veja o console (F12).`);
+    else ui.notifications.info("T20 Hayd Itens: efeitos atualizados.");
+  }
+  if (versao < VERSAO_DADOS) await game.settings.set(MODULO, "versaoDados", VERSAO_DADOS);
+
+  // Sempre: reafirma o marcador nativo do Lancinante (itens copiados podem
+  // chegar com as flags do módulo mas sem o marcador em upgrades).
+  for (const item of candidatos) {
+    const f = item.flags[MODULO];
+    if (f.encantos?.some(e => e.key === "lancinante" && !e.desativada)
+      && !Object.values(item.system?.upgrades ?? {}).includes("lancinating")) {
+      await efeitos.sincronizarLancinante(item).catch(() => {});
+    }
+  }
+}
 
 /* Homebrews e overrides do GM mudaram: derruba o catálogo memoizado (em
  * todos os clientes) para as listas voltarem a refletir as settings. */

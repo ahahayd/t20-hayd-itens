@@ -17,6 +17,7 @@ import {
 } from "./efeitos.mjs";
 import { esc, cartaoHTML, listaHTML, postar } from "./mensagens.mjs";
 import { custoDeConjuracao, agravarSangramento, limitar, houveDano } from "./regras.mjs";
+import { ehV14, opcoesDeRoll, textoDoEfeito } from "./versao.mjs";
 
 const { DialogV2 } = foundry.applications.api;
 
@@ -106,16 +107,31 @@ export async function carregarConjuradora(item, entradaId) {
   // A janela de uso do sistema, aplicada numa cópia: mostra os
   // aprimoramentos e calcula o custo sem rolar nem gastar nada.
   const copia = magia.clone({}, { keepId: true });
+  // v14: a janela lê a lista pronta de efeitos aplicáveis (no v13 ela monta).
+  const v14 = ehV14();
+  if (v14) {
+    copia.prepareFinalAttributes();
+    copia.applicableOnUseEffects = copia._allApplicableOnUseEffects();
+  }
   const config = await AbilityUseDialog.create(copia);
   if (!config) return;
 
   const selecao = [];
   const resumo = [];
   for (const [efId, qtd] of selecaoDoFormulario(config)) {
-    const ef = copia.effects.get(efId) ?? ator.effects.get(efId);
+    const ef = (v14 ? copia.applicableOnUseEffects.find(e => e.id === efId) : null)
+      ?? copia.effects.get(efId) ?? ator.effects.get(efId);
     if (!ef) continue;
-    selecao.push({ nome: ef.name, aplica: qtd });
-    if (qtd) resumo.push(qtd > 1 ? `${ef.name} (${qtd}x)` : ef.name);
+    if (v14) {
+      // O id identifica o efeito: no padrão do 1.6 vários efeitos de uso da
+      // mesma magia têm o mesmo título, e o que ele faz está na descrição.
+      selecao.push({ id: ef.id, nome: ef.name, aplica: qtd });
+      const texto = textoDoEfeito(ef);
+      if (qtd) resumo.push(qtd > 1 ? `${texto} (${qtd}x)` : texto);
+    } else {
+      selecao.push({ nome: ef.name, aplica: qtd });
+      if (qtd) resumo.push(qtd > 1 ? `${ef.name} (${qtd}x)` : ef.name);
+    }
   }
 
   const custo = custoDeConjuracao({
@@ -133,7 +149,8 @@ export async function carregarConjuradora(item, entradaId) {
     bonus: config.bonus ?? "",
     bonusdano: config.bonusdano ?? "",
     rollKeep: config.rollKeep ?? "",
-    rollMode: config.rollMode ?? ""
+    // Campo do modo de rolagem na janela: messageMode no v14, rollMode no v13.
+    ...(v14 ? { messageMode: config.messageMode ?? "" } : { rollMode: config.rollMode ?? "" })
   };
   if (atual) await apagarCampoDeEstado(item, entradaId, "magia");
   await definirEstado(item, entradaId, {
@@ -190,7 +207,7 @@ export async function dispararConjuradora(item, entradaId) {
   try {
     [temp] = await ator.createEmbeddedDocuments("Item", [dados]);
     _preenchimento = { marca, selecao: salvo.selecao ?? [], campos: salvo.campos ?? {} };
-    const mensagem = await temp.roll();
+    const mensagem = await temp.roll(opcoesDeRoll());
     saiu = !!mensagem;
     if (saiu) await apagarCampoDeEstado(item, entradaId, "magia");
   } catch (err) {
@@ -215,11 +232,24 @@ export function aoRenderizarDialogoUso(app, html) {
   const form = raiz?.querySelector?.("form");
   if (!form) return;
 
+  // v14: o nome do aprimoramento divide a linha com a descrição; o efeito é
+  // achado pelo id que vai no nome do campo. v13: pelo nome na linha.
+  const v14 = ehV14();
+  const aplicaveis = app.item?.applicableOnUseEffects ?? [];
   for (const li of form.querySelectorAll(".aprimoramentos-list li.item")) {
     if (li.classList.contains("items-header")) continue;
-    const nome = li.querySelector(".item-name")?.textContent?.trim();
-    const qtd = Number(p.selecao.find(s => s.nome === nome)?.aplica) || 0;
     const aplica = li.querySelector('input[name$=".aplica"]');
+    let qtd;
+    if (v14) {
+      const efId = aplica?.name?.match(/^aprs\.([^.]+)\.aplica$/)?.[1];
+      const nome = aplicaveis.find(e => e.id === efId)?.name
+        ?? li.querySelector(".item-name label")?.textContent?.replace(/:\s*$/, "").trim();
+      const salvo = p.selecao.find(s => s.id && s.id === efId) ?? p.selecao.find(s => !s.id && s.nome === nome);
+      qtd = Number(salvo?.aplica) || 0;
+    } else {
+      const nome = li.querySelector(".item-name")?.textContent?.trim();
+      qtd = Number(p.selecao.find(s => s.nome === nome)?.aplica) || 0;
+    }
     if (aplica?.type === "checkbox") aplica.checked = qtd > 0;
     else if (aplica) aplica.value = String(qtd);
     const custo = li.querySelector('input[type="hidden"][name$=".custo"]');
@@ -400,7 +430,25 @@ async function dadosDeSangramento() {
   } catch (_e) { /* status não registrado */ }
   if (!dados) {
     const base = foundry.utils.deepClone(game.tormenta20?.conditions?.sangrando ?? {});
-    dados = { name: base.name ?? "Sangrando", img: base.icon, statuses: ["sangrando"], flags: base.flags, changes: base.changes, duration: base.duration };
+    dados = ehV14()
+      ? {
+        name: base.name ?? "Sangrando", img: base.img ?? base.icon, statuses: ["sangrando"],
+        system: { changes: foundry.utils.deepClone(base.system?.changes ?? []) },
+        duration: { value: null, units: "rounds", expiry: "sceneEnd" }
+      }
+      : { name: base.name ?? "Sangrando", img: base.icon, statuses: ["sangrando"], flags: base.flags, changes: base.changes, duration: base.duration };
+  }
+  /* v14: o dano por turno vai na chave `danoContinuo`, a única que o combate
+   * do Tormenta20 1.6 rola sozinho no início do turno (a condição do próprio
+   * sistema ainda traz `dano`). */
+  if (ehV14()) {
+    dados.system ??= {};
+    const changes = (dados.system.changes ?? []).filter(c => c.key !== "dano" && c.key !== "danoContinuo");
+    changes.push({ key: "danoContinuo", type: "custom", value: "1d6[perda]" });
+    dados.system.changes = changes;
+    delete dados.changes;
+    dados.img ||= ICONE_SANGRANDO;
+    return dados;
   }
   dados.changes ??= [];
   if (!dados.changes.some(c => c.key === "dano")) dados.changes.push({ key: "dano", mode: 0, value: "1d6[perda]" });
@@ -431,7 +479,16 @@ export async function aplicarSangramento(arma) {
       continue;
     }
     const atual = ator.effects.find(e => e.statuses?.has?.("sangrando"));
-    if (atual) {
+    if (atual && ehV14()) {
+      // v14: aceita o sangramento antigo (`dano`) e o do 1.6 (`danoContinuo`);
+      // o agravado sai sempre com a chave que o combate rola.
+      const changes = foundry.utils.deepClone(atual.system?.changes ?? []);
+      let i = changes.findIndex(c => c.key === "danoContinuo" || c.key === "dano");
+      if (i >= 0) changes[i] = { ...changes[i], key: "danoContinuo", type: "custom", value: agravarSangramento(changes[i].value) };
+      else i = changes.push({ key: "danoContinuo", type: "custom", value: "2d6[perda]" }) - 1;
+      await atual.update({ "system.changes": changes, ...(atual.img ? {} : { img: ICONE_SANGRANDO }) });
+      linhas.push({ img: token.document?.texture?.src, nome: ator.name, extra: `sangramento agravado: ${String(changes[i].value).replace(/\[perda\]/, "")} de perda por turno` });
+    } else if (atual) {
       const changes = foundry.utils.deepClone(atual.changes ?? []);
       let i = changes.findIndex(c => c.key === "dano");
       if (i >= 0) changes[i].value = agravarSangramento(changes[i].value);

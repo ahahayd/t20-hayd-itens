@@ -1281,6 +1281,11 @@ export function materialServeNoItem(def, item) {
   return variantesDoMaterial(def).includes(categoriaMaterialDoItem(item));
 }
 
+/** Título dos efeitos no item (v14): o tipo da entrada. */
+export function rotuloDoTipo(tipo) {
+  return { melhoria: "Melhoria", encanto: "Encanto", material: "Material Especial" }[tipo] ?? "Melhoria";
+}
+
 export function beneficioDaVariante(def, variante) {
   return def?.variantes?.[variante]?.beneficio ?? def?.beneficio ?? "";
 }
@@ -1360,10 +1365,30 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
   const efeitos = entrada.efeitos ?? [];
   const img = ICONES[entrada.tipo] ?? ICONES.melhoria;
 
+  // v14 (padrão do Tormenta20 1.6): materiais com variantes (arma, armadura
+  // leve…) descrevem só a variante deste item, sem o aviso "(substitui o
+  // bônus de Certeira)" — ele é para quem escolhe na aba; o módulo já
+  // suprime a entrada substituída. No v13 a descrição segue como sempre foi.
+  const v14 = ehV14();
+  const beneficio = v14
+    ? beneficioDaVariante(entrada, opcoes.variante).replace(/\s*\(substitui[^)]*\)/i, "")
+    : entrada.beneficio;
+  const tipo = rotuloDoTipo(entrada.tipo);
+
+  /* Nome de efeito passivo ou temporário (o que fica na ficha ou no token).
+   * v13: "Guarda", ou "Corrosiva — ácido persistente".
+   * v14: "Melhoria: Guarda"; o nome próprio do efeito entra entre parênteses —
+   * "Encanto: Corrosiva (ácido persistente)" — sem repetir o nome da entrada.
+   * Efeitos de uso no v14 seguem outro padrão (abaixo). */
   const nomeDe = (ef) => {
     const proprio = ef.nome ? preencherMarcadores(ef.nome, ctx) : "";
-    if (!proprio) return entrada.nome;
-    return ef.nomeExato ? proprio : `${entrada.nome} — ${proprio}`;
+    if (!v14) {
+      if (!proprio) return entrada.nome;
+      return ef.nomeExato ? proprio : `${entrada.nome} — ${proprio}`;
+    }
+    let sub = proprio.startsWith(entrada.nome) ? proprio.slice(entrada.nome.length) : proprio;
+    sub = sub.replace(/^[\s:—–-]+/, "").replace(/^\((.*)\)$/, "$1").trim();
+    return sub ? `${tipo}: ${entrada.nome} (${sub})` : `${tipo}: ${entrada.nome}`;
   };
 
   for (const ef of efeitos) {
@@ -1394,7 +1419,12 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
 
     const nomesCond = condicoes.map(c => CONDICOES[c] ?? c).join(", ");
     const descCond = nomesCond ? ` Aplica: ${nomesCond}.` : "";
-    const description = `<p>${preencherMarcadores(ef.desc ?? entrada.beneficio, ctx)}.${descCond}</p><p><em>${entrada.nome} (${entrada.fonte ?? "homebrew"})</em></p>`;
+    // v14: um parágrafo só — o cartão do chat do Tormenta20 1.6 lê a
+    // descrição com innerText num elemento solto, que junta parágrafos sem
+    // espaço — e só o efeito, porque o título já diz de onde ele vem.
+    const description = v14
+      ? `<p>${preencherMarcadores(ef.desc ?? beneficio, ctx)}.${descCond}</p>`
+      : `<p>${preencherMarcadores(ef.desc ?? entrada.beneficio, ctx)}.${descCond}</p><p><em>${entrada.nome} (${entrada.fonte ?? "homebrew"})</em></p>`;
 
     const extras = {};
     if (ef.gatilho) extras.gatilho = ef.gatilho;
@@ -1500,7 +1530,18 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
       }
     };
 
-    if (ef.condicaoLivre) dados.duration = { rounds: ef.rodadas ?? 1 };
+    if (ef.condicaoLivre) {
+      dados.duration = { rounds: ef.rodadas ?? 1 };
+      /* v14: condição livre (Polida) é um efeito "de alvo" como os das magias
+       * do sistema — sem uso, ativo, temporário e fora da ficha — que o
+       * cartão do chat oferece ao usar o item. */
+      if (v14) {
+        dados.flags.tormenta20.onuse = false;
+        dados.flags.tormenta20.self = false;
+        dados.disabled = false;
+        dados.flags[MODULO].alvo = "item";
+      }
+    }
 
     /* "Itens específicos" (flags.tormenta20.items): o efeito só aparece
      * no diálogo de uso dos itens com esses nomes, separados por ";".
@@ -1515,6 +1556,20 @@ export function montarEfeitosAE(key, entrada, entradaId, item, opcoes = {}) {
       const rotulo = rotuloPericia(opcoes.pericia);
       if (!ef.nomeExato) dados.name = `${nome} (${rotulo})`;
       dados.flags.tormenta20.items = rotulo;
+    }
+
+    /* v14: efeito de uso no padrão do Tormenta20 1.6 — o título diz o tipo
+     * ("Melhoria", "Encanto", "Material Especial") e a descrição começa pelo
+     * nome da entrada e diz o que o efeito faz ("Pungente: +2 em testes de
+     * ataque"). O nome próprio do efeito e a perícia vêm junto do nome. */
+    if (v14 && dados.flags.tormenta20.onuse) {
+      const proprio = ef.nome ? preencherMarcadores(ef.nome, ctx) : "";
+      const rotuloPer = skill && opcoes.pericia && !ef.periciaFixa ? rotuloPericia(opcoes.pericia) : "";
+      const base = proprio.startsWith(entrada.nome) ? proprio : [entrada.nome, proprio].filter(Boolean).join(" — ");
+      const nomeCompleto = [base, rotuloPer].filter(Boolean).join(" — ");
+      const texto = `${preencherMarcadores(ef.desc ?? beneficio, ctx)}.${descCond}`;
+      dados.name = tipo;
+      dados.description = `<p>${nomeCompleto}: ${texto}</p>`;
     }
 
     lista.push(dados);

@@ -19,6 +19,7 @@ import { MODULO, obterEntrada } from "./catalogo.mjs";
 import { dadosDoItem, registroAtivo } from "./efeitos.mjs";
 import { esc, cartaoHTML, listaHTML, postar } from "./mensagens.mjs";
 import { especialLigado, carregarConjuradora, dispararConjuradora } from "./automacoes.mjs";
+import { ehV14, efeitoV14, opcoesDeRoll, itemDeMenu } from "./versao.mjs";
 
 const { DialogV2 } = foundry.applications.api;
 
@@ -183,9 +184,11 @@ export async function usarDose(item, chave, indice) {
     const dadosTemp = foundry.utils.deepClone(dose);
     dadosTemp.name = `${dose.name} (${cfg.sufixoUso})`;
     foundry.utils.setProperty(dadosTemp, `flags.${MODULO}.doseTemporaria`, true);
+    // v14: doses guardadas no v13 trazem efeitos no formato antigo.
+    if (ehV14() && Array.isArray(dadosTemp.effects)) dadosTemp.effects = dadosTemp.effects.map(efeitoV14);
     [temp] = await ator.createEmbeddedDocuments("Item", [dadosTemp]);
 
-    const resultado = await temp.roll();
+    const resultado = await temp.roll(opcoesDeRoll());
 
     if (resultado !== undefined && resultado !== null) {
       // Uso confirmado: consome a dose
@@ -222,18 +225,18 @@ export function opcoesMenuContexto(item, menuItems) {
   if (temMelhoria(item, "injecao-alquimica")) {
     const doses = item.getFlag(MODULO, "alquimicos") ?? [];
     if (doses.length < CONFIGS["injecao-alquimica"].max) {
-      menuItems.push({
+      menuItems.push(itemDeMenu({
         name: "Injeção Alquímica: carregar",
         icon: '<i class="fa-solid fa-syringe"></i>',
         callback: () => carregarDose(item, "injecao-alquimica")
-      });
+      }));
     }
     if (doses.length) {
-      menuItems.push({
+      menuItems.push(itemDeMenu({
         name: `Injeção Alquímica: descarregar (${doses.length})`,
         icon: '<i class="fa-solid fa-rotate-left"></i>',
         callback: () => descarregarDose(item, "injecao-alquimica", 0)
-      });
+      }));
     }
   }
 
@@ -241,23 +244,23 @@ export function opcoesMenuContexto(item, menuItems) {
   if (temMelhoria(item, "injetora")) {
     const doses = item.getFlag(MODULO, "injetora") ?? [];
     if (doses.length < CONFIGS.injetora.max) {
-      menuItems.push({
+      menuItems.push(itemDeMenu({
         name: "Injetora: carregar",
         icon: '<i class="fa-solid fa-syringe"></i>',
         callback: () => carregarDose(item, "injetora")
-      });
+      }));
     }
     if (doses.length) {
-      menuItems.push({
+      menuItems.push(itemDeMenu({
         name: `Injetora: ingerir ${doses[0].name}`,
         icon: '<i class="fa-solid fa-flask"></i>',
         callback: () => usarDose(item, "injetora", 0)
-      });
-      menuItems.push({
+      }));
+      menuItems.push(itemDeMenu({
         name: "Injetora: descarregar",
         icon: '<i class="fa-solid fa-rotate-left"></i>',
         callback: () => descarregarDose(item, "injetora", 0)
-      });
+      }));
     }
   }
 
@@ -266,17 +269,17 @@ export function opcoesMenuContexto(item, menuItems) {
     const conj = registroAtivo(item, "conjuradora");
     if (conj) {
       const magia = dadosDoItem(item).estado[conj.reg.id]?.magia;
-      menuItems.push({
+      menuItems.push(itemDeMenu({
         name: magia ? "Conjuradora: trocar magia guardada" : "Conjuradora: guardar magia",
         icon: '<i class="fa-solid fa-book-open"></i>',
         callback: () => carregarConjuradora(item, conj.reg.id)
-      });
+      }));
       if (magia) {
-        menuItems.push({
+        menuItems.push(itemDeMenu({
           name: `Conjuradora: disparar ${magia.dados?.name ?? "magia"}`,
           icon: '<i class="fa-solid fa-wand-sparkles"></i>',
           callback: () => dispararConjuradora(item, conj.reg.id)
-        });
+        }));
       }
     }
   }

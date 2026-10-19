@@ -23,6 +23,7 @@ import {
   aplicacoesDoFormulario, temFormulario
 } from "./regras.mjs";
 import { ativarDancarina, especialLigado } from "./automacoes.mjs";
+import { ehV14, usoDe, mudancasV14 } from "./versao.mjs";
 
 const TIPOS_USO = {
   atributo: "ability", pericia: "skill", arma: "attack", magia: "spell",
@@ -70,6 +71,26 @@ export function efeitosAplicados(item, opcoes = {}) {
   if (!ator) return [];
   const saida = [];
 
+  // v14: os efeitos de uso podem vir do próprio item, de outros itens do
+  // ator ou do ator; o sistema deixa a lista pronta na cópia rolada.
+  if (ehV14()) {
+    const aplicaveis = item.applicableOnUseEffects ?? item._allApplicableOnUseEffects?.() ?? [];
+    const porId = id => aplicaveis.find(e => e.id === id) ?? item.effects.get(id) ?? ator.effects.get(id);
+    if (temFormulario(opcoes)) {
+      for (const [id, qtd] of aplicacoesDoFormulario(opcoes)) {
+        const efeito = porId(id);
+        if (efeito) saida.push({ efeito, qtd });
+      }
+      return saida;
+    }
+    // Sem diálogo, o sistema aplica os efeitos de uso marcados como automáticos.
+    if (!Array.isArray(opcoes.onUseEffects)) return saida;
+    for (const efeito of aplicaveis) {
+      if (usoDe(efeito).automatico) saida.push({ efeito, qtd: 1 });
+    }
+    return saida;
+  }
+
   if (temFormulario(opcoes)) {
     for (const [id, qtd] of aplicacoesDoFormulario(opcoes)) {
       const efeito = item.effects.get(id) ?? ator.effects.get(id);
@@ -105,22 +126,41 @@ export function sanearCopiaDeModelo(dados) {
   const m = dados?.flags?.[MODULO];
   if (!m?.modelo) return dados;
   const saida = foundry.utils.deepClone(dados);
-  saida.changes = foundry.utils.deepClone(m.changesModelo ?? []);
+  const duracao = m.duracaoModelo;
 
   // `onuse` da cópia sai do catálogo, não do item: um modelo destravado
   // (naoSuspenso) fica marcado como de uso NO ITEM só para o sistema não o
   // listar sozinho — no alvo ele tem de voltar ao que o catálogo pediu.
-  const t = { ...(saida.flags.tormenta20 ?? {}), self: false, onuse: !!m.modeloUso };
-  const duracao = m.duracaoModelo;
-  if (duracao === "cena") {
-    t.durationScene = true;
-    saida.duration = {};
+  if (ehV14()) {
+    // v14: system.changes, system.onuse e duração em value/units/expiry.
+    saida.system ??= {};
+    saida.system.changes = mudancasV14(m.changesModelo ?? []);
+    delete saida.changes;
+    saida.system.onuse = !!m.modeloUso;
+    if (saida.system.onuse) {
+      saida.system.abilityUse = { ...(saida.system.abilityUse ?? {}), automatic: !m.suspensoNoAlvo };
+      saida.system.abilityUse.types = (saida.system.abilityUse.types ?? []).filter(t => t !== "self");
+    }
+    saida.duration = duracao === "cena"
+      ? { value: null, units: "rounds", expiry: "sceneEnd" }
+      : { value: Number(duracao?.rounds) || 1, units: "rounds", expiry: "turnStart" };
+    delete saida.start;
+    saida.flags.tormenta20 = {};
+    // Efeito de uso no 1.6 fica sempre disabled (vale só quando usado).
+    saida.disabled = saida.system.onuse || !!m.suspensoNoAlvo;
   } else {
-    t.durationScene = false;
-    saida.duration = { rounds: Number(duracao?.rounds) || 1 };
+    saida.changes = foundry.utils.deepClone(m.changesModelo ?? []);
+    const t = { ...(saida.flags.tormenta20 ?? {}), self: false, onuse: !!m.modeloUso };
+    if (duracao === "cena") {
+      t.durationScene = true;
+      saida.duration = {};
+    } else {
+      t.durationScene = false;
+      saida.duration = { rounds: Number(duracao?.rounds) || 1 };
+    }
+    saida.flags.tormenta20 = t;
+    saida.disabled = !!m.suspensoNoAlvo;
   }
-  saida.flags.tormenta20 = t;
-  saida.disabled = !!m.suspensoNoAlvo;
   saida.transfer = false;
   saida.flags[MODULO] = {
     copiaDeModelo: m.modelo,

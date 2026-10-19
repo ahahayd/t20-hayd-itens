@@ -21,9 +21,10 @@
 
 import {
   MODULO, obterEntrada, obterMateriais, montarEfeitosAE,
-  precoMelhorias, precoEncantos, varianteInicial, variantesDoMaterial, precoDaVariante
+  precoMelhorias, precoEncantos, varianteInicial, variantesDoMaterial, precoDaVariante, rotuloDoTipo
 } from "./catalogo.mjs";
 import { acharSugestao, temMarcadores } from "./regras.mjs";
+import { ehV14, efeitoV14, apagarChave } from "./versao.mjs";
 
 export const LISTAS = ["melhorias", "encantos", "materiais"];
 export const MAX_FRENETICA = 5;
@@ -203,10 +204,13 @@ function efeitoAmeacadora(item, entradaId) {
   const criticoM = Number(item.system?.criticoM) || 20;
   const margem = Math.max(1, 21 - criticoM);
   return [{
-    name: "Ameaçadora",
+    // v14: título pelo tipo e o nome na descrição (padrão do Tormenta20 1.6).
+    name: ehV14() ? rotuloDoTipo(obterEntrada("ameacadora")?.tipo ?? "encanto") : "Ameaçadora",
     img: "icons/magic/symbols/runes-star-pentagon-blue.webp",
     origin: item.uuid,
-    description: `<p>Duplica a margem de ameaça (${criticoM}–20 → ${21 - margem * 2}–20).</p>`,
+    description: ehV14()
+      ? `<p>Ameaçadora: duplica a margem de ameaça (${criticoM}–20 → ${21 - margem * 2}–20).</p>`
+      : `<p>Duplica a margem de ameaça (${criticoM}–20 → ${21 - margem * 2}–20).</p>`,
     changes: [{ key: "criticoM", value: String(-margem), mode: 2, priority: 0 }],
     disabled: false,
     transfer: false,
@@ -341,6 +345,20 @@ function montarEfeitosDaEntrada(item, key, def, id, opcoes = {}) {
     ? efeitoAmeacadora(item, id)
     : montarEfeitosAE(key, defEfetiva(def, opcoes), id, item, opcoes);
 
+  /* v14 (Tormenta20 1.6): todos moram no próprio item. Os de alvo "ator"
+   * (passivos, perícia, magia, poder, riders de ataque) vão com
+   * `transfer: true`: o efeito do item vale direto na ficha — e o sistema o
+   * suprime quando a arma/armadura está desequipada — e os efeitos de uso de
+   * qualquer item do ator entram na janela de uso. `doAtor` fica vazio.
+   * v13: os de alvo "ator" são criados no ator (a transferência nativa não
+   * acontece para itens que já estão na ficha). */
+  if (ehV14()) {
+    for (const e of efeitos) {
+      if (e.flags?.[MODULO]?.alvo === "ator") e.transfer = true;
+    }
+    return { doItem: efeitos, doAtor: [] };
+  }
+
   const doItem = [];
   const doAtor = [];
   for (const e of efeitos) {
@@ -378,7 +396,13 @@ function efeitosDasEntradas(item, ids) {
 async function aplicarEfeitos(item, { criarItem = [], apagarItem = [], criarAtor = [], apagarAtor = [] } = {}) {
   const ator = item.actor;
   const mexeNoAtor = !!ator && (criarAtor.length > 0 || apagarAtor.length > 0);
+  const mexeNoItem = apagarItem.length > 0 || criarItem.length > 0;
   const tarefas = [];
+  // v14: o catálogo monta no formato do v13 e o Tormenta20 1.6 só lê o novo.
+  if (ehV14()) {
+    criarItem = criarItem.map(efeitoV14);
+    criarAtor = criarAtor.map(efeitoV14);
+  }
 
   if (apagarItem.length || criarItem.length) {
     tarefas.push((async () => {
@@ -399,7 +423,9 @@ async function aplicarEfeitos(item, { criarItem = [], apagarItem = [], criarAtor
   // Uma única re-preparação/re-render do ator no fim, em vez de uma por
   // operação: os dados derivados (Defesa, RD…) voltam atualizados sem
   // precisar desequipar/reequipar o item.
-  if (mexeNoAtor) refrescarAtor(ator);
+  // v14: os efeitos de ator moram no item, então mexer só no item também
+  // muda a ficha.
+  if (ehV14() ? (ator && (mexeNoAtor || mexeNoItem)) : mexeNoAtor) refrescarAtor(ator);
 }
 
 /** Força o ator a recalcular os dados derivados e re-renderizar a ficha. */
@@ -501,6 +527,34 @@ export async function atualizarNomesDinamicos(item) {
       if (temNomeDinamico(obterEntrada(reg.key))) await reconstruirEntrada(item, lista, reg.id);
     }
   }
+}
+
+/**
+ * Refaz do zero TODOS os efeitos do módulo de um item (no item e no ator),
+ * a partir das entradas registradas nas flags. Usado na migração para o v14:
+ * os efeitos antigos guardavam a configuração de uso em `flags.tormenta20`,
+ * que o Tormenta20 1.6 deixou de ler (e a migração dele renomeia os efeitos
+ * de uso para o nome do item).
+ */
+export async function reconstruirItem(item) {
+  const d = dadosDoItem(item);
+  const apagarItem = [...item.effects].filter(e => e.flags?.[MODULO]?.entradaId).map(e => e.id);
+  const apagarAtor = item.actor
+    ? [...item.actor.effects].filter(e => e.flags?.[MODULO]?.itemId === item.id).map(e => e.id)
+    : [];
+  const criarItem = [];
+  const criarAtor = [];
+  for (const lista of LISTAS) {
+    for (const reg of d[lista]) {
+      if (reg.desativada || reg.suprimidaPor) continue;
+      const def = defDoRegistro(lista, reg.key);
+      if (!def) continue;
+      const efs = montarEfeitosDaEntrada(item, reg.key, def, reg.id, opcoesDoRegistro(item, lista, reg, d.estado));
+      criarItem.push(...efs.doItem);
+      criarAtor.push(...efs.doAtor);
+    }
+  }
+  await aplicarEfeitos(item, { criarItem, criarAtor, apagarItem, apagarAtor });
 }
 
 /** Remove do ator os efeitos originados de um item (item excluído/removido). */
@@ -686,7 +740,7 @@ export async function removerEntrada(item, lista, id) {
   const dNovo = { ...d, ...listas };
   const payload = {};
   for (const nomeLista of mudou) payload[`flags.${MODULO}.${nomeLista}`] = listas[nomeLista];
-  if (d.estado[id]) payload[`flags.${MODULO}.estado.-=${id}`] = null;
+  if (d.estado[id]) Object.assign(payload, apagarChave(`flags.${MODULO}.estado.${id}`));
   Object.assign(payload, precoAtualizado(item, dNovo) ?? {});
   Object.assign(payload, marcadorLancinante(item, dNovo) ?? {});
 
@@ -812,5 +866,5 @@ export async function definirEstado(item, id, patch, { reconstruir = true } = {}
 
 /** Apaga um campo do estado de uma entrada (ex.: a magia da Conjuradora). */
 export async function apagarCampoDeEstado(item, id, campo) {
-  await item.update({ [`flags.${MODULO}.estado.${id}.-=${campo}`]: null }, { render: false });
+  await item.update(apagarChave(`flags.${MODULO}.estado.${id}.${campo}`), { render: false });
 }
