@@ -222,6 +222,29 @@ function efeitoAmeacadora(item, entradaId) {
 }
 
 /**
+ * v14: o Tormenta20 1.6 reconhece o Lancinante por um efeito na arma com
+ * `system.identifier: "lancinating"` (não lê mais a marca em
+ * `system.upgrades`). O efeito não muda nada sozinho: o sistema o procura
+ * no crítico e multiplica o dano pela regra de tormenta20.lancinatingVersion.
+ */
+function efeitoLancinante(item, entradaId) {
+  return [{
+    name: rotuloDoTipo(obterEntrada("lancinante")?.tipo ?? "encanto"),
+    img: "icons/magic/symbols/runes-star-pentagon-blue.webp",
+    origin: item.uuid,
+    description: "<p>Lancinante: no crítico, o bônus de dano do Dilacerante também é multiplicado.</p>",
+    changes: [],
+    disabled: false,
+    transfer: false,
+    system: { identifier: "lancinating" },
+    flags: {
+      tormenta20: { onuse: false },
+      [MODULO]: { entradaId, key: "lancinante", alvo: "item" }
+    }
+  }];
+}
+
+/**
  * Definição efetiva de uma entrada com estado: a Frenética ganha o efeito
  * do bônus acumulado; a Piedosa desligada não concede nada.
  */
@@ -261,6 +284,9 @@ function defEfetiva(def, opcoes) {
  * correto. Separado da escrita para poder viajar junto do update das flags.
  */
 function marcadorLancinante(item, d) {
+  // v14: o Lancinante é um efeito no item (efeitoLancinante); a marca em
+  // system.upgrades não é mais lida pelo sistema.
+  if (ehV14()) return null;
   const slots = item.system?.upgrades;
   if (!slots) return null;
   const temLanc = d.encantos.some(e => e.key === "lancinante" && !e.desativada);
@@ -343,7 +369,9 @@ function checarConflitos(item, def) {
 function montarEfeitosDaEntrada(item, key, def, id, opcoes = {}) {
   const efeitos = def.especial === "ameacadora"
     ? efeitoAmeacadora(item, id)
-    : montarEfeitosAE(key, defEfetiva(def, opcoes), id, item, opcoes);
+    : (ehV14() && def.especial === "lancinante")
+      ? efeitoLancinante(item, id)
+      : montarEfeitosAE(key, defEfetiva(def, opcoes), id, item, opcoes);
 
   /* v14 (Tormenta20 1.6): todos moram no próprio item. Os de alvo "ator"
    * (passivos, perícia, magia, poder, riders de ataque) vão com

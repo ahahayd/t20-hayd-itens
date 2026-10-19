@@ -139,8 +139,9 @@ Hooks.once("ready", () => {
  *   5 — sem o aviso "(substitui …)" na descrição dos efeitos
  *   6 — título pelo tipo (Melhoria/Encanto/Material Especial), nome na descrição
  *   7 — passivos e temporários: "Melhoria: Guarda", descrição só com o efeito
+ *   8 — Lancinante vira um efeito na arma (system.identifier "lancinating")
  */
-const VERSAO_DADOS = 7;
+const VERSAO_DADOS = 8;
 
 /** Itens gerenciados do mundo: soltos, nas fichas e nos tokens não vinculados. */
 function itensGerenciados() {
@@ -173,15 +174,8 @@ async function migrar() {
   }
   if (versao < VERSAO_DADOS) await game.settings.set(MODULO, "versaoDados", VERSAO_DADOS);
 
-  // Sempre: reafirma o marcador nativo do Lancinante (itens copiados podem
-  // chegar com as flags do módulo mas sem o marcador em upgrades).
-  for (const item of candidatos) {
-    const f = item.flags[MODULO];
-    if (f.encantos?.some(e => e.key === "lancinante" && !e.desativada)
-      && !Object.values(item.system?.upgrades ?? {}).includes("lancinating")) {
-      await efeitos.sincronizarLancinante(item).catch(() => {});
-    }
-  }
+  // O Lancinante no v14 é um efeito na arma (refeito pela reconstrução
+  // acima); a marca antiga em system.upgrades não é mais usada.
 }
 
 /* Homebrews e overrides do GM mudaram: derruba o catálogo memoizado (em
