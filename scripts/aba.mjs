@@ -15,7 +15,7 @@ import {
   variantesDoMaterial, varianteInicial, beneficioDaVariante
 } from "./catalogo.mjs";
 import {
-  dadosDoItem, ehMunicao, calcularPreco, definirPrecoBase,
+  dadosDoItem, ehMunicao, ehMagico, definirMagico, calcularPreco, definirPrecoBase,
   adicionarEntrada, adicionarMaterial, removerEntrada, atualizarCustoMaterial,
   alternarEntrada, definirAlvos, definirVariante, nomesParaEscolha, registroPorId, MAX_FRENETICA
 } from "./efeitos.mjs";
@@ -25,7 +25,8 @@ import {
   carregarConjuradora, descartarConjuradora, dispararConjuradora,
   ativarDancarina, desativarDancarina, gastarFrenetica, ajustarFrenetica, alternarPiedosa
 } from "./automacoes.mjs";
-import { acharSugestao } from "./regras.mjs";
+import { acharSugestao, capacidadePadrao } from "./regras.mjs";
+import { usaMunicao, definirCapacidade } from "./municao.mjs";
 
 const ABA_ID = "hayd-itens";
 
@@ -268,6 +269,7 @@ async function montarContexto(app, item) {
     todasCategorias: todas,
     // Item já sob gestão do módulo (tem preço base capturado)
     gerenciado: d.precoBase !== null,
+    magico: ehMagico(item),
     preco: calcularPreco(item),
     melhorias: montarLista(item, "melhorias", d.melhorias, d, editavel, aplicadas),
     encantos: montarLista(item, "encantos", d.encantos, d, editavel, aplicadas),
@@ -275,7 +277,12 @@ async function montarContexto(app, item) {
     opcoesMelhorias: memoOpcoes(`melhorias|${chaveCats}`, () => agruparPorCategoria(obterMelhorias(), cats, todas)),
     opcoesEncantos: memoOpcoes(`encantos|${chaveCats}`, () => agruparPorCategoria(obterEncantos(), cats, todas)),
     opcoesMateriais,
-    temAtor: !!item.actor
+    temAtor: !!item.actor,
+    // Arma que usa munição: quantos disparos cabem antes de recarregar.
+    armaMunicao: usaMunicao(item) ? {
+      valor: item.flags?.[MODULO]?.municao?.capacidade ?? "",
+      padrao: capacidadePadrao(item.name)
+    } : null
   };
 }
 
@@ -431,6 +438,14 @@ function ativarListeners(app, item, $aba) {
   // Preço base
   $aba.find(".hayd-preco-base").on("change", acao(app, ev =>
     definirPrecoBase(item, ev.currentTarget.value)));
+
+  // Item considerado mágico (marca o selo na Ficha Hayd)
+  $aba.find(".hayd-magico-check").on("change", acao(app, ev =>
+    definirMagico(item, ev.currentTarget.checked)));
+
+  // Disparos por recarga (arma que usa munição)
+  $aba.find(".hayd-capacidade").on("change", acao(app, ev =>
+    definirCapacidade(item, ev.currentTarget.value)));
 
   // Adicionar melhoria/encanto
   $aba.find(".hayd-add-melhoria").on("click", acao(app, () => {

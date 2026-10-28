@@ -2,9 +2,10 @@
  * t20-hayd-itens | alquimica.mjs
  * Automação das melhorias com doses carregáveis:
  *
- *  - Injeção Alquímica (T20 p.165, arma, 2 doses): carregue preparados
- *    pela aba Melhorias & Encantos ou pelo clique direito na arma; ao
- *    atacar, o cartão da arma no chat oferece o botão de injetar.
+ *  - Injeção Alquímica (T20 p.165, arma ou munição, 2 doses): carregue
+ *    preparados pela aba Melhorias & Encantos ou pelo clique direito no
+ *    item; ao atacar, o cartão da arma no chat oferece o botão de injetar
+ *    (as doses da munição aparecem quando é ela que foi disparada).
  *  - Injetora (HA p.240, armadura, 1 dose): carregue um preparado ou
  *    poção; ingerir (ação de movimento) pelo menu de contexto.
  *
@@ -16,7 +17,7 @@
  */
 
 import { MODULO, obterEntrada } from "./catalogo.mjs";
-import { dadosDoItem, registroAtivo } from "./efeitos.mjs";
+import { dadosDoItem, registroAtivo, ehMunicao } from "./efeitos.mjs";
 import { esc, cartaoHTML, listaHTML, postar } from "./mensagens.mjs";
 import { especialLigado, carregarConjuradora, dispararConjuradora } from "./automacoes.mjs";
 import { ehV14, efeitoV14, opcoesDeRoll, itemDeMenu } from "./versao.mjs";
@@ -35,7 +36,9 @@ const CONFIGS = {
     especial: "alquimica",
     verboUso: "Injetar",
     sufixoUso: "injeção",
-    tipoItem: "arma",
+    // Munição também recebe (T20 p.178): as doses vão no pacote e são
+    // injetadas pelo cartão do ataque da arma que o disparou.
+    aceita: item => item.type === "arma" || ehMunicao(item),
     dicaCarregar: "carregar exige ação completa"
   },
   "injetora": {
@@ -45,7 +48,7 @@ const CONFIGS = {
     especial: "injetora",
     verboUso: "Ingerir",
     sufixoUso: "injetora",
-    tipoItem: "equipamento",
+    aceita: item => item.type === "equipamento",
     dicaCarregar: "carregar exige ação completa; ingerir é ação de movimento"
   }
 };
@@ -62,7 +65,7 @@ export function automacaoAlquimicaAtiva() {
 /** O item tem a melhoria com doses, ligada (pelo GM e na aba)? */
 export function temMelhoria(item, chave) {
   if (!automacaoAtiva(chave)) return false;
-  if (item.type !== CONFIGS[chave].tipoItem) return false;
+  if (!CONFIGS[chave].aceita(item)) return false;
   return (item.getFlag(MODULO, "melhorias") ?? []).some(m => m.key === chave && !m.desativada);
 }
 

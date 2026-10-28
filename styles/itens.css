@@ -1,6 +1,8 @@
 /* Base visual compartilhada dos módulos Hayd. Entra por @import, e não pelo
    manifesto, para uma atualização valer com F5. */
 @import url("hayd-ui-base.css");
+/* Badges de material, melhorias e encantos (também usados pela Ficha Hayd) */
+@import url("badges.css");
 
 /* ════════════════════════════════════════════════════════════════
    t20-hayd-itens — aba "Melhorias & Encantos" e diálogos
@@ -167,6 +169,29 @@
 .hayd-carga-nome { flex: 1; }
 .hayd-carga-linha input { flex: 0 0 auto; width: 56px; }
 
+/* ── Diálogo de veneno na arma ── */
+label.hayd-carga-linha { cursor: pointer; }
+.hayd-carga-linha input[type="radio"] { width: auto; margin: 0; }
+.hayd-veneno-tipo { opacity: 0.65; }
+.hayd-veneno-outros { margin: 4px 0; }
+.hayd-veneno-outros summary { cursor: pointer; opacity: 0.8; }
+.hayd-veneno-outros[open] summary { margin-bottom: 2px; }
+.hayd-veneno-cd { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; }
+.hayd-veneno-atributo { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+.hayd-veneno-atributo select { width: auto; }
+.hayd-veneno-opcao { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.hayd-veneno-opcao input { margin: 0; }
+.hayd-veneno-opcao span { flex: 1; }
+.hayd-veneno-opcao small { opacity: 0.7; }
+.hayd-veneno-formula {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px;
+  margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(128, 128, 128, 0.35);
+}
+.hayd-veneno-formula small { opacity: 0.7; }
+.hayd-veneno-formula input { width: 3.5em; text-align: center; }
+.hayd-veneno-total { font-size: 1.15em; }
+.hayd-veneno-nota { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+
 /* ── Chat: cartões do módulo e botões no cartão do ataque ── */
 .hayd-itens-card p { margin: 2px 0; }
 .hayd-itens-lista { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
@@ -261,3 +286,125 @@
   color: #a8322a;
 }
 .hayd-btn-revincular { align-self: flex-start; margin-top: 2px; }
+
+/* ── Munição: linha embaixo da arma na ficha do personagem ─────────── */
+.hayd-municao-li { list-style: none; }
+.hayd-municao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 26px;
+  margin: 0 8px 6px 30px;
+  padding: 2px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.hayd-municao-img { flex: 0 0 20px; width: 20px; height: 20px; border: none; border-radius: 3px; object-fit: cover; }
+.hayd-municao-nome { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 6px; cursor: pointer; }
+.hayd-municao-nome span { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hayd-municao-nome small { min-width: 0; opacity: 0.65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hayd-municao-carga,
+.hayd-municao-estoque { flex: 0 0 auto; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hayd-municao-estoque i { opacity: 0.6; font-size: 0.85em; }
+.hayd-municao-sem .hayd-municao-estoque { color: #a8322a; }
+.hayd-municao-ejetar { flex: 0 0 auto; padding: 1px 4px; border-radius: 3px; cursor: pointer; opacity: 0.7; }
+.hayd-municao-ejetar:hover { opacity: 1; }
+.hayd-municao-vazia { border-style: dashed; justify-content: space-between; }
+.hayd-municao-carga i { font-size: 0.9em; }
+.hayd-municao-recarregar { flex: 0 0 auto; }
+.hayd-municao-recarregar { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
+.hayd-municao-status { opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Ficha Hayd: alinhada ao nome (depois da imagem) e nos tons dela. */
+.hayd-ficha .hf-item .hayd-municao {
+  margin-left: 46px;
+  border-color: var(--hf-linha-forte);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--hf-texto);
+}
+.hayd-ficha .hf-item .hayd-municao-vazia { background: transparent; }
+.hayd-ficha .hf-item .hayd-municao-nome small,
+.hayd-ficha .hf-item .hayd-municao-status { color: var(--hf-texto-3); opacity: 1; }
+.hayd-ficha .hf-item .hayd-municao-carga,
+.hayd-ficha .hf-item .hayd-municao-estoque { color: var(--hf-ouro); }
+.hayd-ficha .hf-item .hayd-municao-sem .hayd-municao-estoque { color: var(--hf-acento-claro); }
+.hayd-ficha .hf-item .hayd-municao-recarregar { color: var(--hf-acento-claro); }
+.hayd-ficha .hf-item .hayd-municao-recarregar:hover,
+.hayd-ficha .hf-item .hayd-municao-nome:hover span { color: #fff; }
+.hayd-ficha .hf-item .hayd-municao-ejetar:hover { background: var(--hf-acento-bg-forte); }
+.hayd-ficha .hf-aba-combate .hf-tipo-arma:not(.equipado) .hayd-municao { opacity: 0.6; }
+.hayd-ficha .hf-aba-combate .hf-tipo-arma:not(.equipado):hover .hayd-municao { opacity: 1; }
+
+/* Ficha Ameaça (t20-hayd-ui): a linha vem logo depois do ataque. */
+.hayd-ameaca .hayd-municao-li .hayd-municao {
+  margin: 0 8px 6px 48px;
+  border-color: var(--ha-linha-forte);
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--ha-texto);
+}
+.hayd-ameaca .hayd-municao-li .hayd-municao-vazia { background: transparent; }
+.hayd-ameaca .hayd-municao-li .hayd-municao-nome small,
+.hayd-ameaca .hayd-municao-li .hayd-municao-status { color: var(--ha-texto-3, rgba(236, 230, 221, 0.55)); opacity: 1; }
+.hayd-ameaca .hayd-municao-li .hayd-municao-carga,
+.hayd-ameaca .hayd-municao-li .hayd-municao-estoque { color: var(--ha-ouro); }
+.hayd-ameaca .hayd-municao-li .hayd-municao-sem .hayd-municao-estoque,
+.hayd-ameaca .hayd-municao-li .hayd-municao-recarregar { color: var(--ha-acento-claro); }
+.hayd-ameaca .hayd-municao-li .hayd-municao-recarregar:hover,
+.hayd-ameaca .hayd-municao-li .hayd-municao-nome:hover span { color: #fff; }
+.hayd-ameaca .hayd-municao-li .hayd-municao-ejetar:hover { background: var(--ha-acento-bg-forte); }
+
+/* Menu de recarga: base visual da família, ancorado no botão. */
+.hayd-municao-menu.hayd-ui {
+  position: fixed;
+  z-index: 10000;
+  min-width: 220px;
+  max-width: 320px;
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  padding: 0 0 4px;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r2);
+  box-shadow: var(--t20g-sombra2);
+  font-size: 13px;
+}
+.hayd-municao-menu.hayd-ui .hayd-municao-menu-titulo {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--t20g-line);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao { cursor: pointer; }
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao:focus-visible { outline: none; box-shadow: var(--t20g-foco) inset; }
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao.atual { box-shadow: inset 2px 0 0 var(--t20g-accent); }
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao.esgotada { opacity: 0.45; cursor: not-allowed; }
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao-texto { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hayd-municao-menu.hayd-ui .hayd-municao-opcao-qtd { flex: 0 0 auto; font-weight: 700; color: var(--t20g-ink-2); }
+.hayd-municao-menu.hayd-ui .hayd-municao-nenhuma { color: var(--t20g-ink-2); }
+.hayd-municao-menu.hayd-ui .hayd-municao-nenhuma > i { flex: 0 0 28px; text-align: center; }
+.hayd-municao-menu.hayd-ui .hayd-municao-menu-vazio { margin: 0; padding: 10px; color: var(--t20g-ink-3); }
+
+/* Chat: munição gasta no disparo (herda a cor do cartão). */
+.hayd-municao-nota { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: 0.85em; }
+.hayd-municao-nota img { flex: 0 0 20px; width: 20px; height: 20px; border: none; }
+
+/* Disparo sem munição: o vermelho muda de tom com o fundo da mensagem
+   (pergaminho do jogador ou escuro do Mestre), nunca supõe um só. */
+.hayd-municao-aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(200, 45, 35, 0.55);
+  border-radius: 4px;
+  background: rgba(200, 45, 35, 0.12);
+  color: #d9473b;
+  font-weight: 700;
+}
+.t20a-chat-player .hayd-municao-aviso { color: #9e2117; }
+.t20a-chat-npc .hayd-municao-aviso { color: #ff7a6e; }

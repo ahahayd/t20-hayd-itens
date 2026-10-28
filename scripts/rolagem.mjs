@@ -24,6 +24,7 @@ import {
 } from "./regras.mjs";
 import { ativarDancarina, especialLigado } from "./automacoes.mjs";
 import { ehV14, usoDe, mudancasV14 } from "./versao.mjs";
+import { aoUsarItem, usaMunicao, municaoDaArma } from "./municao.mjs";
 
 const TIPOS_USO = {
   atributo: "ability", pericia: "skill", arma: "attack", magia: "spell",
@@ -37,10 +38,12 @@ const TIPOS_USO = {
 export function registrarEnvoltorios() {
   envolver("rollDamage", aoRolarDano);
   envolver("displayCard", aoExibirCartao);
+  // MIXED: sem munição, o ataque nem chega a acontecer.
+  envolver("roll", aoUsarItem, "MIXED");
 }
 
 /** Envolve um método de ItemT20 (libWrapper, se ativo; senão, direto). */
-function envolver(metodo, fn) {
+function envolver(metodo, fn, tipo = "WRAPPER") {
   const classe = CONFIG.Item.documentClass;
   if (typeof classe?.prototype?.[metodo] !== "function") {
     console.warn(`${MODULO} | ItemT20.${metodo} não encontrado — automações de rolagem desligadas.`);
@@ -48,7 +51,7 @@ function envolver(metodo, fn) {
   }
   if (globalThis.libWrapper && game.modules.get("lib-wrapper")?.active) {
     libWrapper.register(MODULO, `CONFIG.Item.documentClass.prototype.${metodo}`,
-      function (original, ...args) { return fn.call(this, original, ...args); }, "WRAPPER");
+      function (original, ...args) { return fn.call(this, original, ...args); }, tipo);
     return;
   }
   const original = classe.prototype[metodo];
@@ -226,11 +229,24 @@ function prepararDano(item, opcoes) {
     }
   }
 
-  if (item.type !== "arma" || !item.actor || !item.flags?.[MODULO]) return;
+  if (item.type !== "arma" || !item.actor) return;
+  // Os encantos especiais da munição carregada valem neste ataque; com a
+  // mesma entrada nos dois, vale a da arma.
+  const municao = usaMunicao(item) ? municaoDaArma(item) : null;
+  if (!item.flags?.[MODULO] && !municao?.flags?.[MODULO]) return;
+  const naArmaOuMunicao = key => registroAtivo(item, key) ?? (municao && registroAtivo(municao, key));
+
+  // v13: o sistema acha o Lancinante pela marca em system.upgrades da arma;
+  // o da munição marca só a cópia rolada. (v14: a cópia do efeito basta.)
+  const upgrades = item.system?.upgrades;
+  if (!ehV14() && municao && upgrades && registroAtivo(municao, "lancinante")
+    && !Object.values(upgrades).includes("lancinating")) {
+    upgrades[Object.entries(upgrades).find(([, v]) => !v)?.[0] ?? "material"] = "lancinating";
+  }
 
   // Pena de Kraken: crítico sobe o dado da arma em dois passos, antes de
   // o sistema multiplicar (o multiplicador age sobre o primeiro dado).
-  if (ataqueCritico(item) && krakenAtivo(item)) {
+  if (ataqueCritico(item) && (krakenAtivo(item) || (municao && krakenAtivo(municao)))) {
     const tabela = CONFIG.T20?.passosDano;
     for (const r of rolls) {
       const base = r.parts[0];
@@ -240,7 +256,7 @@ function prepararDano(item, opcoes) {
 
   // Assassina: o furtivo entra no dano como a rolagem do próprio poder
   // (mudança "dano: roll"); a parte é identificada por essa referência.
-  const assassina = especialLigado("assassina") ? registroAtivo(item, "assassina") : null;
+  const assassina = especialLigado("assassina") ? naArmaOuMunicao("assassina") : null;
   if (assassina) {
     const poder = poderFurtivo(item.actor, assassina.reg.alvos);
     const ref = poder?.system?.rolls?.find(r => r.type === "dano")?.parts?.[0];

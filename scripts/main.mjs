@@ -14,7 +14,10 @@ import { registrarHomebrew, abrirGerenciadorHomebrew, obterHomebrews } from "./h
 import { registrarEditor, abrirEditor, obterOverrides } from "./editor.mjs";
 import { opcoesMenuContexto, carregarAlquimico, descarregarAlquimico } from "./alquimica.mjs";
 import { aoRenderizarMensagem } from "./chat.mjs";
+import { opcoesMenuVeneno } from "./veneno.mjs";
 import { registrarEnvoltorios } from "./rolagem.mjs";
+import * as municao from "./municao.mjs";
+import * as badges from "./badges.mjs";
 import { ehV14, aguardarMigracaoDoSistema, corrigirSupressaoDoSistema } from "./versao.mjs";
 
 Hooks.once("init", () => {
@@ -22,6 +25,7 @@ Hooks.once("init", () => {
 
   registrarHomebrew();
   registrarEditor();
+  municao.registrarConfiguracao();
 
   // Versão dos dados gravados no mundo (migração do v14, ver migrar()).
   game.settings.register(MODULO, "versaoDados", {
@@ -65,12 +69,15 @@ Hooks.once("ready", () => {
     catalogo,
     efeitos,
     automacoes,
+    badges: badges.BADGES,
     homebrews: obterHomebrews,
     overrides: obterOverrides,
     abrirGerenciadorHomebrew,
     abrirEditor,
     carregarAlquimico,
-    descarregarAlquimico
+    descarregarAlquimico,
+    recarregar: municao.recarregar,
+    descarregar: municao.descarregar
   };
   const mod = game.modules.get(MODULO);
   if (mod) mod.api = api;
@@ -190,10 +197,39 @@ Hooks.on("renderItemSheetT20", (app, html) => {
     console.error(`${MODULO} | Falha ao renderizar a aba`, err));
 });
 
-/* Menu de contexto (Injeção Alquímica, Injetora, Conjuradora) nas fichas. */
+/* Linha da munição embaixo das armas, na ficha do personagem. */
+Hooks.on("renderActorSheet", (app, html) => {
+  try { municao.aoRenderizarFichaAtor(app, html); }
+  catch (err) { console.error(`${MODULO} | Falha ao mostrar a munição na ficha`, err); }
+});
+
+/* Badges de material, melhorias e encantos nas listas da ficha do sistema e no chat. */
+Hooks.on("renderActorSheet", (app, html) => {
+  try { badges.aoRenderizarFichaAtor(app, html); }
+  catch (err) { console.error(`${MODULO} | Falha ao mostrar os badges na ficha`, err); }
+});
+Hooks.on("updateItem", (item, mudou) => {
+  try { badges.aoAtualizarItem(item, mudou); }
+  catch (err) { console.error(`${MODULO} | Falha ao atualizar os badges da ficha`, err); }
+});
+Hooks.on("renderChatMessageHTML", (mensagem, html) => {
+  try { badges.aoRenderizarMensagem(mensagem, html); }
+  catch (err) { console.error(`${MODULO} | Falha ao mostrar os badges no chat`, err); }
+});
+
+/* Os efeitos da munição acompanham a munição e a arma. */
+for (const gancho of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) {
+  Hooks.on(gancho, (efeito, ...resto) => municao.aoMudarEfeito(efeito, resto.at(-1)));
+}
+Hooks.on("updateItem", (item, mudou, options, userId) => municao.aoAtualizarItem(item, userId));
+Hooks.on("deleteItem", (item, options, userId) => municao.aoApagarItem(item, userId));
+
+/* Menu de contexto (Injeção Alquímica, Injetora, Conjuradora, veneno) nas fichas. */
 Hooks.on("tormenta20.getItemToggleContextOptions", (item, menuItems) => {
   try { opcoesMenuContexto(item, menuItems); }
   catch (err) { console.error(`${MODULO} | Falha no menu de contexto`, err); }
+  try { opcoesMenuVeneno(item, menuItems); }
+  catch (err) { console.error(`${MODULO} | Falha no menu de veneno`, err); }
 });
 
 /* Botões nos cartões do chat (ataque da arma e mensagens do módulo). */

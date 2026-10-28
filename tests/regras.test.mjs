@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   normalizarNome, acharSugestao, preencherMarcadores, temMarcadores,
   separarNumeroTipado, subirPassos, dadosAssassina, agravarSangramento,
-  limitar, custoDeConjuracao, aplicacoesDoFormulario, temFormulario, houveDano} from "../scripts/regras.mjs";
+  limitar, custoDeConjuracao, aplicacoesDoFormulario, temFormulario, houveDano,
+  capacidadePadrao, disparosNaRecarga, impressao} from "../scripts/regras.mjs";
 
 const PASSOS = [
   ["1", "1d2", "1d3", "1d4", "1d6", "1d8", "1d10", "1d12", "3d6", "4d6", "4d8", "4d10", "4d12"],
@@ -96,4 +97,25 @@ test("cura e mana não gastam a RD de uso único", () => {
 test("parcela sem valor não conta como dano", () => {
   assert.equal(houveDano({ corte: { value: 0 } }, 1), false);
   assert.equal(houveDano({ corte: {} }, 1), false);
+});
+
+test("arcos não recarregam; bestas, fundas e armas de fogo recarregam a cada disparo", () => {
+  assert.equal(capacidadePadrao("Arco Longo"), 0);
+  assert.equal(capacidadePadrao("arco curto"), 0);
+  assert.equal(capacidadePadrao("Besta Leve"), 1);
+  assert.equal(capacidadePadrao("Arcabuz"), 1);
+  assert.equal(capacidadePadrao("Funda"), 1);
+});
+
+test("recarga limitada pela capacidade e pelo estoque", () => {
+  assert.equal(disparosNaRecarga(1, 20), 1);
+  assert.equal(disparosNaRecarga(6, 4), 4);
+  assert.equal(disparosNaRecarga(6, 5, 2), 2);
+  assert.equal(disparosNaRecarga(6, 0), 0);
+  assert.equal(disparosNaRecarga(0, 20), 0);
+});
+
+test("impressão muda junto com o texto", () => {
+  assert.equal(impressao("abc"), impressao("abc"));
+  assert.notEqual(impressao("abc"), impressao("abd"));
 });

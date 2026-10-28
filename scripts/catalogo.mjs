@@ -173,8 +173,8 @@ export const MELHORIAS = {
     beneficio: "Uma habilidade de ataque escolhida custa −1 PM com esta arma", prereqs: ["*"],
     efeitos: [{ custo: "-1", desc: "Reduz em −1 PM o custo de uma habilidade ativada junto ao ataque" }] },
 
-  "injecao-alquimica": { nome: "Injeção Alquímica", tipo: "melhoria", cats: ["arma"], fonte: "T20 p.165",
-    beneficio: "Ao acertar, libera uma dose de preparado carregada na arma (2 doses; clique direito na arma para carregar)",
+  "injecao-alquimica": { nome: "Injeção Alquímica", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.165",
+    beneficio: "Ao acertar, libera uma dose de preparado carregada na arma ou munição (2 doses; clique direito no item para carregar)",
     especial: "alquimica", efeitos: [] },
 
   "macica": { nome: "Maciça", tipo: "melhoria", cats: ["arma", "municao"], fonte: "T20 p.165",

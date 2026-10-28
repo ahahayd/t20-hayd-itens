@@ -4,7 +4,9 @@
  *  - cartão de ataque da arma: injetar dose (Injeção Alquímica), disparar
  *    a magia guardada (Conjuradora), aplicar sangramento (Sanguinária),
  *    onda de choque (Ressonante), receber PV temporários (Drenante),
- *    gastar PM na Frenética e ligar/desligar a Piedosa;
+ *    gastar PM na Frenética e ligar/desligar a Piedosa — também os da
+ *    munição disparada; usar o veneno aplicado na arma (veneno.mjs);
+ *  - a munição gasta no disparo, para todos (municao.mjs);
  *  - cartões do módulo com [data-hayd-acao] (sustentar/cancelar Dançarina).
  */
 
@@ -16,13 +18,17 @@ import {
   receberRolagem, acaoDeMensagem, gastarFrenetica, alternarPiedosa
 } from "./automacoes.mjs";
 import { esc } from "./mensagens.mjs";
+import { mensagensDeMunicao } from "./municao.mjs";
+import { venenoDaArma, rotuloDoVeneno, usarVeneno, notaDeCD } from "./veneno.mjs";
 
 export function aoRenderizarMensagem(mensagem, html) {
   const raiz = html instanceof HTMLElement ? html : html?.[0];
   if (!raiz?.querySelector) return;
   ligarAcoes(raiz);
   const card = raiz.querySelector(".chat-card.item-card");
-  if (card) decorarCartao(mensagem, card);
+  if (!card) return;
+  notaDeCD(mensagem, card);
+  decorarCartao(mensagem, card);
 }
 
 /* ------------------------------------------------------------------ */
@@ -94,31 +100,74 @@ function corrigirImagensDeModelo(mensagem, card) {
   }
 }
 
+/** Munição gasta no disparo, logo abaixo do título do cartão (para todos). */
+function notaDeMunicao(card, nota, ator) {
+  if (!mensagensDeMunicao(ator) || card.querySelector(".hayd-municao-nota, .hayd-municao-aviso")) return;
+  if (nota?.semMunicao) {
+    const aviso = document.createElement("div");
+    aviso.className = "hayd-municao-aviso";
+    aviso.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Disparo feito sem munição`;
+    card.prepend(aviso);
+    return;
+  }
+  if (!nota?.nome) return;
+  const resta = Math.max(0, Number(nota.resta) || 0);
+  const partes = [`Gastou <b>${Number(nota.gasto) || 1}× ${esc(nota.nome)}</b>`];
+  if (!resta) partes.push("<b>acabou a munição</b>");
+  else {
+    partes.push(`restam ${resta}`);
+    if (nota.carregadas === 0) partes.push("arma descarregada");
+    else if (nota.carregadas > 0 && nota.capacidade > 1) partes.push(`${nota.carregadas}/${nota.capacidade} na arma`);
+  }
+  const div = document.createElement("div");
+  div.className = "hayd-municao-nota";
+  div.innerHTML = `${nota.img ? `<img src="${esc(nota.img)}" alt="">` : ""}<span>${partes.join(" · ")}</span>`;
+  const cabecalho = card.querySelector(".card-header");
+  if (cabecalho) cabecalho.after(div);
+  else card.prepend(div);
+}
+
+/** Botões de injetar as doses da Injeção Alquímica de um item (arma ou munição). */
+function botoesDeInjecao(item) {
+  if (!temMelhoria(item, "injecao-alquimica")) return [];
+  // Uma dose por botão, procurada pelo nome na hora do clique — o índice
+  // muda quando outra dose é usada antes.
+  return (item.getFlag(MODULO, "alquimicos") ?? []).map(dose =>
+    botao("fa-solid fa-syringe", `Injetar ${dose.name}`, () => {
+      const atual = item.getFlag(MODULO, "alquimicos") ?? [];
+      const i = atual.findIndex(d => d.name === dose.name);
+      if (i < 0) {
+        ui.notifications.warn("Esta dose já foi usada.");
+        return true;
+      }
+      return usarDose(item, "injecao-alquimica", i);
+    }));
+}
+
 function decorarCartao(mensagem, card) {
   corrigirImagensDeModelo(mensagem, card);
+  const nota = mensagem.flags?.[MODULO]?.municao;
+  const ator = mensagem.speakerActor ?? game.actors.get(card.dataset.actorId);
+  notaDeMunicao(card, nota, ator);
   if (card.querySelector(".hayd-cartao-rodape")) return;
 
-  const ator = mensagem.speakerActor ?? game.actors.get(card.dataset.actorId);
   const item = ator?.items?.get(card.dataset.itemId);
-  if (!ator?.isOwner || !item?.flags?.[MODULO] || item.type !== "arma") return;
+  if (!ator?.isOwner || item?.type !== "arma") return;
+  // A munição disparada: os encantos dela também oferecem botões. Com a
+  // mesma entrada nos dois, vale a da arma.
+  const municao = nota?.id ? ator.items.get(nota.id) : null;
+  if (!item.flags?.[MODULO] && !municao?.flags?.[MODULO]) return;
+  const fonte = key => (registroAtivo(item, key) ? item : (municao && registroAtivo(municao, key) ? municao : null));
 
   const botoes = [];
 
-  // Injeção Alquímica: uma dose por botão (procurada pelo nome na hora do
-  // clique — o índice muda quando outra dose é usada antes).
-  if (temMelhoria(item, "injecao-alquimica")) {
-    for (const dose of item.getFlag(MODULO, "alquimicos") ?? []) {
-      botoes.push(botao("fa-solid fa-syringe", `Injetar ${dose.name}`, () => {
-        const atual = item.getFlag(MODULO, "alquimicos") ?? [];
-        const i = atual.findIndex(d => d.name === dose.name);
-        if (i < 0) {
-          ui.notifications.warn("Esta dose já foi usada.");
-          return true;
-        }
-        return usarDose(item, "injecao-alquimica", i);
-      }));
-    }
-  }
+  // Injeção Alquímica: as doses da arma e as da munição disparada.
+  botoes.push(...botoesDeInjecao(item));
+  if (municao) botoes.push(...botoesDeInjecao(municao));
+
+  // Veneno aplicado na arma: usado no ataque que acertar.
+  const veneno = venenoDaArma(item);
+  if (veneno) botoes.push(botao("fa-solid fa-skull-crossbones", rotuloDoVeneno(veneno), () => usarVeneno(item)));
 
   // Conjuradora: dispara a magia guardada.
   const conj = especialLigado("conjuradora") ? registroAtivo(item, "conjuradora") : null;
@@ -129,14 +178,16 @@ function decorarCartao(mensagem, card) {
   }
 
   // Sanguinária: aplica/agrava o sangramento nos tokens selecionados.
-  if (especialLigado("sanguinaria") && registroAtivo(item, "sanguinaria")) {
-    botoes.push(botao("fa-solid fa-droplet", "Aplicar sangramento", () => aplicarSangramento(item), { reutilizavel: true }));
+  const sanguinaria = especialLigado("sanguinaria") ? fonte("sanguinaria") : null;
+  if (sanguinaria) {
+    botoes.push(botao("fa-solid fa-droplet", "Aplicar sangramento", () => aplicarSangramento(sanguinaria), { reutilizavel: true }));
   }
 
   // Ressonante: onda de choque com metade do dano do ataque.
   const temDano = (mensagem.rolls ?? []).some(r => r.options?.type === "damage" && !r.options?.haydExtra);
-  if (temDano && especialLigado("ressonante") && registroAtivo(item, "ressonante")) {
-    botoes.push(botao("fa-solid fa-wave-square", "Onda de choque (2 PM)", () => ondaDeChoque(mensagem, item)));
+  const ressonante = temDano && especialLigado("ressonante") ? fonte("ressonante") : null;
+  if (ressonante) {
+    botoes.push(botao("fa-solid fa-wave-square", "Onda de choque (2 PM)", () => ondaDeChoque(mensagem, ressonante)));
   }
 
   // Frenética: o bônus sobe a cada ataque, 1 PM por vez — o botão vem no
@@ -152,13 +203,14 @@ function decorarCartao(mensagem, card) {
   // Piedosa: liga/desliga com 1 PM, como a Frenética sobe o bônus — vale para
   // os próximos ataques, então o botão fica no cartão. O rótulo acompanha o
   // estado depois de cada clique.
-  const pied = especialLigado("piedosa") ? registroAtivo(item, "piedosa") : null;
+  const donoPiedosa = especialLigado("piedosa") ? fonte("piedosa") : null;
+  const pied = donoPiedosa ? registroAtivo(donoPiedosa, "piedosa") : null;
   if (pied) {
-    const rotuloPiedosa = () => (dadosDoItem(item).estado[pied.reg.id]?.inativa
+    const rotuloPiedosa = () => (dadosDoItem(donoPiedosa).estado[pied.reg.id]?.inativa
       ? "Piedosa — Ativar (1 PM)"
       : "Piedosa — Desativar (1 PM)");
     const b = botao("fa-solid fa-dove", rotuloPiedosa(), async () => {
-      await alternarPiedosa(item, pied.reg.id);
+      await alternarPiedosa(donoPiedosa, pied.reg.id);
       b.innerHTML = `<i class="fa-solid fa-dove"></i> ${esc(rotuloPiedosa())}`;
     }, { reutilizavel: true });
     botoes.push(b);

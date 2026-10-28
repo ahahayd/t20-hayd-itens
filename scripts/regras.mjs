@@ -134,3 +134,26 @@ export function houveDano(partes, multiplicador) {
   if (!(Number(multiplicador) > 0)) return false;
   return Object.values(partes ?? {}).some(p => Number(p?.value) > 0);
 }
+
+/**
+ * Disparos que cabem na arma antes de recarregar, quando a ficha não diz.
+ * Arcos não recarregam (puxar a flecha faz parte do ataque): 0. Bestas,
+ * fundas e armas de fogo recarregam a cada disparo: 1.
+ */
+export function capacidadePadrao(nomeDaArma) {
+  return /\barcos?\b/.test(normalizarNome(nomeDaArma)) ? 0 : 1;
+}
+
+/** Quantos disparos entram numa recarga, pelo estoque da munição. */
+export function disparosNaRecarga(capacidade, estoque, porDisparo = 1) {
+  const cada = Math.max(1, Number(porDisparo) || 1);
+  return Math.max(0, Math.min(Number(capacidade) || 0, Math.floor((Number(estoque) || 0) / cada)));
+}
+
+/** Impressão curta de um texto (djb2), para saber se algo mudou. */
+export function impressao(texto) {
+  let h = 5381;
+  const s = String(texto ?? "");
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}

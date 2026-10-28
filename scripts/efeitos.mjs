@@ -46,6 +46,19 @@ export function dadosDoItem(item) {
   };
 }
 
+/**
+ * Item considerado mágico? A escolha do usuário (caixa da aba) vale; sem
+ * escolha, qualquer encanto já torna o item mágico.
+ */
+export function ehMagico(item) {
+  const f = item.flags?.[MODULO] ?? {};
+  return typeof f.magico === "boolean" ? f.magico : (f.encantos ?? []).length > 0;
+}
+
+export async function definirMagico(item, valor) {
+  await item.update({ [`flags.${MODULO}.magico`]: !!valor }, { render: false });
+}
+
 /** É munição? (preços pela metade — T20 p.178) */
 export function ehMunicao(item) {
   return item.type === "consumivel" && item.system?.tipo === "ammo";
@@ -200,7 +213,7 @@ export async function definirPrecoBase(item, valor) {
  * Ameaçadora: duplica a margem de ameaça. Calculada no momento da
  * aplicação a partir da margem atual da arma (ex.: 19 → 17; 18 → 15).
  */
-function efeitoAmeacadora(item, entradaId) {
+export function efeitoAmeacadora(item, entradaId) {
   const criticoM = Number(item.system?.criticoM) || 20;
   const margem = Math.max(1, 21 - criticoM);
   return [{
