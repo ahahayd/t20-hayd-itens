@@ -1,0 +1,79 @@
+/* ==========================================================================
+   t20-hayd-itens | Badges de material, melhorias e encantos
+   Não supõem fundo: o texto mistura o tom da família com a cor do texto
+   herdada (clareia no fundo escuro, escurece no claro). O tom de cada
+   família vem de --h (matiz) e --c (croma); o material traz os dele inline.
+   O t20-hayd-ui reaproveita estas classes na Ficha Hayd.
+   ========================================================================== */
+
+.hbdgs {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+/* Linhas da ficha do sistema: um respiro entre os chips e a coluna seguinte (ataque, dano, crítico) */
+.item-name > .hbdgs { margin-right: 14px; }
+.hbdgs:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; border-radius: 4px; }
+
+.hbdg {
+    --h: 250;
+    --c: .03;
+    /* Cor "pura" da família: só vira texto depois de misturar com o texto herdado
+       (metade e metade): o contraste fica acima de 4,5:1 em fundo claro, escuro
+       e pergaminho, sem o badge saber qual deles é. Croma ×1,3 compensa a mistura. */
+    --hbdg-base: oklch(.6 calc(var(--c) * 1.3) var(--h));
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 18px;
+    padding: 0 6px 0 5px;
+    font: 600 11px/1 var(--font-primary, "Signika", system-ui, sans-serif);
+    letter-spacing: .2px;
+    white-space: nowrap;
+    color: color-mix(in oklch, var(--hbdg-base) 50%, currentColor);
+    background: color-mix(in oklab, var(--hbdg-base) 12%, transparent);
+    border: 1px solid color-mix(in oklab, var(--hbdg-base) 42%, transparent);
+    border-radius: 4px;
+}
+.hbdg > svg, .hbdg > i { flex: none; width: 10px; height: 10px; font-size: 9px; display: grid; place-items: center; }
+.hbdg .n { font-variant-numeric: tabular-nums; }
+/* Material: só o diamante (o nome vai no tooltip) */
+.hbdg-icone { padding: 0 5px; }
+
+.hbdg-mel { --h: 82;  --c: .17; }
+.hbdg-enc { --h: 308; --c: .2; box-shadow: 0 0 8px -2px color-mix(in oklab, var(--hbdg-base) 55%, transparent); }
+.hbdg-enc > svg { animation: hbdg-cintila 5s ease-in-out infinite; }
+
+@keyframes hbdg-cintila {
+    0%, 86%, 100% { opacity: 1; transform: scale(1); }
+    92% { opacity: .55; transform: scale(.8); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hbdg-enc > svg { animation: none; }
+}
+
+/* Tooltip: o Foundry o desenha sempre escuro, então os tons são claros fixos. */
+.hbdg-tooltip { max-width: 300px; text-align: left; }
+.hbdg-tooltip .hbdg-tip { font-size: 12px; line-height: 1.45; white-space: normal; }
+.hbdg-tooltip h6 {
+    margin: 9px 0 3px; padding: 0; border: 0;
+    font: 600 10.5px/1 var(--font-primary, "Signika", sans-serif);
+    letter-spacing: 1.2px; text-transform: uppercase; color: oklch(.8 .06 250);
+}
+.hbdg-tooltip h6:first-child { margin-top: 0; }
+.hbdg-tooltip ul { list-style: none; margin: 0; padding: 0; }
+.hbdg-tooltip li { display: block; margin: 0 0 3px; padding-left: 12px; position: relative; }
+.hbdg-tooltip li::before {
+    content: ""; position: absolute; left: 1px; top: .55em; width: 5px; height: 5px;
+    transform: rotate(45deg); background: currentColor; opacity: .55;
+}
+.hbdg-tooltip li small { display: block; opacity: .72; font-size: 11.5px; }
+.hbdg-tooltip li em { opacity: .6; font-style: normal; font-size: 11px; }
+.hbdg-tooltip li.off { opacity: .55; }
+.hbdg-tooltip li.off b { text-decoration: line-through; }
+
+/* Cartão de chat: chips sob o título, sem margem lateral */
+.chat-message .hbdgs.hbdg-cartao { margin: 6px 0 0; flex-wrap: wrap; }
